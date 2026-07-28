@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
   const [phone, setPhone] = useState('');
@@ -18,12 +19,12 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
       });
       const data = await res.json();
       if (data.success) {
-        onShowToast(`⚡ EMERGENCY ALERT DISPATCHED! (${data.dispatch.id}) Tech ETA: ${data.dispatch.etaMinutes} mins.`);
+        onShowToast(`EMERGENCY ALERT DISPATCHED! (${data.dispatch.id}) Tech ETA: ${data.dispatch.etaMinutes} mins.`);
       } else {
-        onShowToast('⚡ EMERGENCY ALERT DISPATCHED! Tech ETA: 20 mins.');
+        onShowToast('EMERGENCY ALERT DISPATCHED! Tech ETA: 20 mins.');
       }
     } catch (err) {
-      onShowToast('⚡ EMERGENCY ALERT DISPATCHED! Tech ETA: 20 mins.');
+      onShowToast('EMERGENCY ALERT DISPATCHED! Tech ETA: 20 mins.');
     }
     onClose();
   };
@@ -33,7 +34,8 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
       <div className="bg-white rounded-2xl max-w-lg w-full mx-4 shadow-2xl overflow-hidden border-t-4 border-red-600">
         <div className="bg-red-50 px-7 py-6 border-b border-red-100 flex items-center justify-between">
           <h3 className="text-xl font-extrabold text-red-700 flex items-center gap-2">
-            ⚡ 24/7 Emergency Dispatch
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <span>24/7 Emergency Dispatch</span>
           </h3>
           <button onClick={onClose} className="text-2xl text-slate-400 hover:text-red-700">&times;</button>
         </div>
@@ -61,7 +63,7 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
               type="tel" 
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 000-0000" 
+              placeholder="+91 98765 43210" 
               className="w-full p-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-red-600" 
               required 
             />

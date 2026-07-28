@@ -1,4 +1,5 @@
 'use client';
+import { PhoneCall } from 'lucide-react';
 
 export default function EmergencySection({ onOpenEmergency }) {
   return (
@@ -16,11 +17,9 @@ export default function EmergencySection({ onOpenEmergency }) {
               onClick={onOpenEmergency}
               className="inline-flex items-center gap-2.5 bg-white text-[#0A2540] hover:bg-slate-50 font-extrabold text-base px-8 py-4 rounded-full shadow-lg hover:scale-105 transition-all"
             >
-              <span>📞</span> Request Emergency Service
+              <PhoneCall className="w-5 h-5 text-[#0A2540]" />
+              <span>Request Emergency Service</span>
             </button>
-          </div>
-          <div className="absolute -right-8 -bottom-10 text-[200px] opacity-5 pointer-events-none select-none">
-            ⚡
           </div>
         </div>
       </div>

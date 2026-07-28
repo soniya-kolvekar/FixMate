@@ -14,6 +14,7 @@ import BookingModal from '../components/BookingModal';
 import EmergencyModal from '../components/EmergencyModal';
 import AuthModal from '../components/AuthModal';
 import { logoutUser } from '../lib/firebase';
+import { Info } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -103,7 +104,7 @@ export default function Home() {
       {/* Toast Notification Popup */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-semibold animate-in slide-in-from-bottom duration-300">
-          <span>ℹ️</span>
+          <Info className="w-5 h-5 text-blue-400" />
           <span>{toastMessage}</span>
         </div>
       )}

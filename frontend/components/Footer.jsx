@@ -4,7 +4,7 @@ import Link from 'next/link';
 export default function Footer({ onShowToast }) {
   const handleSubmit = (e) => {
     e.preventDefault();
-    onShowToast('✅ Thank you for subscribing to FixMate updates!');
+    onShowToast('Thank you for subscribing to FixMate updates!');
     e.target.reset();
   };
 
@@ -13,11 +13,12 @@ export default function Footer({ onShowToast }) {
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div>
-            <Link href="/" className="flex items-center gap-2.5 text-2xl font-extrabold text-[#0A2540] mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#0A2540] flex items-center justify-center text-white text-base">
-                🛠️
-              </div>
-              <span>FixMate</span>
+            <Link href="/" className="inline-block mb-4">
+              <img 
+                src="/assets/images/logo.png" 
+                alt="FixMate Logo" 
+                className="h-20 w-auto object-contain" 
+              />
             </Link>
             <p className="text-sm text-slate-600 leading-relaxed mb-6 max-w-xs">
               Professional home services at your doorstep. Trusted by thousands, delivered with excellence.
@@ -61,7 +62,7 @@ export default function Footer({ onShowToast }) {
                 required 
               />
               <button type="submit" className="bg-[#0A2540] hover:bg-[#13395F] text-white px-4 rounded-md text-base transition-colors">
-                ➔
+                &rarr;
               </button>
             </form>
           </div>

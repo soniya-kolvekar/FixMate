@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { ShieldCheck, Tag, MapPin, Award } from 'lucide-react';
 
 export default function TrustSection() {
   return (
@@ -14,8 +15,8 @@ export default function TrustSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4">
-                🛡️
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-[#0A2540] mb-2">Verified Experts</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
@@ -24,8 +25,8 @@ export default function TrustSection() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4">
-                🏷️
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <Tag className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-[#0A2540] mb-2">Transparent Pricing</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
@@ -34,8 +35,8 @@ export default function TrustSection() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4">
-                📍
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <MapPin className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-[#0A2540] mb-2">Live Tracking</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
@@ -44,8 +45,8 @@ export default function TrustSection() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4">
-                ⭐
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <Award className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-[#0A2540] mb-2">Service Guarantee</h3>
               <p className="text-sm text-slate-600 leading-relaxed">

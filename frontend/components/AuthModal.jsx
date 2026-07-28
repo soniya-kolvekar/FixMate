@@ -17,17 +17,17 @@ export default function AuthModal({ isOpen, mode, onClose, onAuthSuccess, onShow
     try {
       if (authMode === 'login') {
         const res = await loginUser(email, password);
-        const inferredRole = email.toLowerCase().includes('dispatcher') ? 'Dispatcher' : 'Dispatcher'; // Defaulting to Dispatcher for the user flow or check email
+        const inferredRole = email.toLowerCase().includes('dispatcher') ? 'Dispatcher' : 'Customer';
         onAuthSuccess(res.user, inferredRole);
-        onShowToast(`🔥 Welcome back, ${res.user.displayName || res.user.email}! (Firebase Auth)`);
+        onShowToast(`Welcome back, ${res.user.displayName || res.user.email}!`);
       } else {
         const res = await registerUser(email, password, role);
         onAuthSuccess(res.user, role);
-        onShowToast(`🔥 Account created as ${role}! (Firebase Auth & Firestore)`);
+        onShowToast(`Account created as ${role}!`);
       }
       onClose();
     } catch (err) {
-      onShowToast(`⚠️ Auth error: ${err.message}`);
+      onShowToast(`Auth error: ${err.message}`);
     } finally {
       setLoading(false);
     }

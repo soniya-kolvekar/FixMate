@@ -3,14 +3,14 @@ import { useState, useEffect } from 'react';
 
 export default function BookingModal({ isOpen, selectedService, onClose, onShowToast }) {
   const [serviceId, setServiceId] = useState('plumbing');
-  const [price, setPrice] = useState(49);
+  const [price, setPrice] = useState(499);
   const [address, setAddress] = useState('');
   const [dateTime, setDateTime] = useState('');
 
   useEffect(() => {
     if (selectedService) {
       setServiceId(selectedService.id);
-      setPrice(selectedService.price);
+      setPrice(selectedService.price || 499);
     }
   }, [selectedService]);
 
@@ -26,12 +26,12 @@ export default function BookingModal({ isOpen, selectedService, onClose, onShowT
       });
       const data = await res.json();
       if (data.success) {
-        onShowToast(`🎉 Booking Confirmed! (${data.booking.id}) Technician assigned.`);
+        onShowToast?.(`Booking Confirmed! (${data.booking.id}) Technician assigned.`);
       } else {
-        onShowToast('🎉 Booking Confirmed! Technician assigned.');
+        onShowToast?.('Booking Confirmed! Technician assigned.');
       }
     } catch (err) {
-      onShowToast('🎉 Booking Confirmed! Technician assigned.');
+      onShowToast?.('Booking Confirmed! Technician assigned.');
     }
     onClose();
   };
@@ -51,17 +51,17 @@ export default function BookingModal({ isOpen, selectedService, onClose, onShowT
               value={serviceId}
               onChange={(e) => {
                 setServiceId(e.target.value);
-                const prices = { plumbing: 49, electrical: 59, ac_service: 69, carpentry: 79, painting: 149, cleaning: 89, appliances: 59, pest_control: 99 };
-                setPrice(prices[e.target.value] || 59);
+                const prices = { plumbing: 499, electrical: 599, ac_service: 699, carpentry: 799, painting: 1499, cleaning: 899, appliances: 599, pest_control: 999 };
+                setPrice(prices[e.target.value] || 599);
               }}
               className="w-full p-3 rounded-lg border border-slate-300 text-sm font-semibold text-[#0A2540]"
             >
-              <option value="plumbing">Plumbing Inspection & Repair (From $49)</option>
-              <option value="electrical">Electrical Wiring & Switchboard (From $59)</option>
-              <option value="ac_service">AC Cleaning & Service (From $69)</option>
-              <option value="carpentry">Carpentry & Cabinetry (From $79)</option>
-              <option value="painting">Wall Painting & Decor (From $149)</option>
-              <option value="cleaning">Deep House Sanitation (From $89)</option>
+              <option value="plumbing">Plumbing Inspection & Repair (From ₹499)</option>
+              <option value="electrical">Electrical Wiring & Switchboard (From ₹599)</option>
+              <option value="ac_service">AC Cleaning & Service (From ₹699)</option>
+              <option value="carpentry">Carpentry & Cabinetry (From ₹799)</option>
+              <option value="painting">Wall Painting & Decor (From ₹1,499)</option>
+              <option value="cleaning">Deep House Sanitation (From ₹899)</option>
             </select>
           </div>
 
@@ -90,7 +90,7 @@ export default function BookingModal({ isOpen, selectedService, onClose, onShowT
 
           <div className="bg-blue-50 p-4 rounded-xl flex justify-between items-center text-sm font-bold text-[#0A2540]">
             <span>Estimated Cost:</span>
-            <span className="text-2xl font-extrabold text-blue-600">${price}.00</span>
+            <span className="text-2xl font-extrabold text-blue-600">₹{price}</span>
           </div>
 
           <button type="submit" className="w-full bg-[#0A2540] hover:bg-[#13395F] text-white font-bold py-3.5 rounded-lg transition-colors">
