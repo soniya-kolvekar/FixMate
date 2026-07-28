@@ -23,6 +23,12 @@ export default function Header({ onOpenAuth, currentUser, onLogout }) {
           {currentUser ? (
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-[#0A2540]">👤 {currentUser.displayName || currentUser.email}</span>
+              <Link 
+                href="/dispatcher"
+                className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-md shadow-sm transition-all"
+              >
+                Dashboard
+              </Link>
               <button 
                 onClick={onLogout}
                 className="text-sm font-semibold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors"
