@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
 import PortalSection from '../components/PortalSection';
@@ -15,6 +16,7 @@ import AuthModal from '../components/AuthModal';
 import { logoutUser } from '../lib/firebase';
 
 export default function Home() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState(null);
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
   const [portalModal, setPortalModal] = useState({ isOpen: false, role: 'customer' });
@@ -91,7 +93,10 @@ export default function Home() {
         isOpen={authModal.isOpen}
         mode={authModal.mode}
         onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
-        onAuthSuccess={(user) => setCurrentUser(user)}
+        onAuthSuccess={(user, role) => {
+          setCurrentUser(user);
+          router.push('/dispatcher');
+        }}
         onShowToast={showToast}
       />
 
