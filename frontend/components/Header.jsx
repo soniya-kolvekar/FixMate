@@ -19,6 +19,7 @@ export default function Header({ onOpenAuth, currentUser, onLogout }) {
           <Link href="#services" className="text-[15px] font-semibold text-slate-600 hover:text-[#0A2540] transition-colors">Services</Link>
           <Link href="#about" className="text-[15px] font-semibold text-slate-600 hover:text-[#0A2540] transition-colors">About</Link>
           <Link href="#contact" className="text-[15px] font-semibold text-slate-600 hover:text-[#0A2540] transition-colors">Contact</Link>
+          <Link href="/admin" className="text-[15px] font-semibold text-blue-600 hover:text-[#0A2540] transition-colors">Admin Console</Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -29,10 +30,16 @@ export default function Header({ onOpenAuth, currentUser, onLogout }) {
                 {currentUser.displayName || currentUser.email}
               </span>
               <Link 
+                href="/admin"
+                className="text-sm font-bold text-white bg-[#0A2540] hover:bg-[#13395F] px-3.5 py-1.5 rounded-md shadow-sm transition-all"
+              >
+                Admin
+              </Link>
+              <Link 
                 href="/dispatcher"
                 className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-md shadow-sm transition-all"
               >
-                Dashboard
+                Dispatcher
               </Link>
               <button 
                 onClick={onLogout}

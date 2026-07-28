@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { User, Wrench, MapPin, BarChart2 } from 'lucide-react';
 
 export default function PortalSection({ onOpenPortal }) {
@@ -44,6 +45,7 @@ export default function PortalSection({ onOpenPortal }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
           {portals.map((portal) => {
             const IconComp = portal.icon;
+            const linkHref = portal.id === 'admin' ? '/admin' : portal.id === 'dispatcher' ? '/dispatcher' : '#';
             return (
               <div 
                 key={portal.id}
@@ -60,12 +62,18 @@ export default function PortalSection({ onOpenPortal }) {
                     {portal.desc}
                   </p>
                 </div>
-                <button 
-                  onClick={() => onOpenPortal(portal.id)}
-                  className="w-full bg-[#0A2540] hover:bg-[#13395F] text-white font-bold text-sm py-3.5 rounded-md transition-colors text-center"
+                <Link 
+                  href={linkHref}
+                  onClick={(e) => {
+                    if (linkHref === '#') {
+                      e.preventDefault();
+                      onOpenPortal(portal.id);
+                    }
+                  }}
+                  className="w-full bg-[#0A2540] hover:bg-[#13395F] text-white font-bold text-sm py-3.5 rounded-md transition-colors text-center block"
                 >
                   Go to {portal.title}
-                </button>
+                </Link>
               </div>
             );
           })}
