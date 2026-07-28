@@ -45,7 +45,7 @@ export default function PortalSection({ onOpenPortal }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
           {portals.map((portal) => {
             const IconComp = portal.icon;
-            const linkHref = portal.id === 'admin' ? '/admin' : portal.id === 'dispatcher' ? '/dispatcher' : '#';
+            const linkHref = portal.id === 'admin' ? '/admin' : portal.id === 'dispatcher' ? '/dispatcher' : portal.id === 'technician' ? '/technician' : '#';
             return (
               <div 
                 key={portal.id}
