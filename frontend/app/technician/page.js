@@ -173,17 +173,57 @@ export default function TechnicianModulePage() {
     }, 4000);
   };
 
-  // Availability Switcher (Issue #11)
-  const handleToggleAvailability = (forcedStatus) => {
+  // Availability Switcher with Firebase Firestore & Backend Sync
+  const handleToggleAvailability = async (forcedStatus) => {
+    let nextStatus = 'Available';
     if (typeof forcedStatus === 'string') {
-      const formatted = forcedStatus === 'ONLINE' ? 'Available' : forcedStatus === 'BUSY' ? 'Busy' : 'Offline';
-      setAvailability(formatted);
-      showToast(`Duty availability updated to: ${formatted}`);
+      nextStatus = (forcedStatus === 'ONLINE' || forcedStatus === 'Available') ? 'Available' : (forcedStatus === 'BUSY' || forcedStatus === 'Busy') ? 'Busy' : 'Offline';
     } else {
-      const next = availability === 'Available' ? 'Busy' : availability === 'Busy' ? 'Offline' : 'Available';
-      setAvailability(next);
-      showToast(`Duty availability updated to: ${next}`);
+      nextStatus = availability === 'Available' ? 'Busy' : availability === 'Busy' ? 'Offline' : 'Available';
     }
+
+    setAvailability(nextStatus);
+
+    const user = auth.currentUser;
+    const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+
+    const techPayload = {
+      id: techUid,
+      uid: techUid,
+      name: currentUser?.name || 'Rajesh Kumar',
+      phone: currentUser?.phone || '+91 98765 43210',
+      email: currentUser?.email || 'rajesh.kumar@fixmate.in',
+      specialization: currentUser?.specialization || 'Master Plumber',
+      specialty: currentUser?.specialization || 'Plumbing',
+      workingArea: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+      zone: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+      availability: nextStatus,
+      status: nextStatus, // Available | Busy | Offline
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Update Firebase Firestore in real-time for both technicians & users collections
+    try {
+      await setDoc(doc(db, 'technicians', techUid), techPayload, { merge: true });
+      await setDoc(doc(db, 'users', techUid), techPayload, { merge: true });
+    } catch (err) {
+      console.warn('Firestore availability update error:', err);
+    }
+
+    // 2. Sync to Backend API
+    fetch(`http://localhost:5000/api/technicians/${techUid}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus, availability: nextStatus })
+    }).catch(err => console.warn('Express API status update error:', err));
+
+    // 3. LocalStorage & Window Custom Event broadcast
+    try {
+      localStorage.setItem(`fixmate_tech_availability_${techUid}`, nextStatus);
+      window.dispatchEvent(new CustomEvent('fixmate_tech_status_updated', { detail: techPayload }));
+    } catch(e) {}
+
+    showToast(`🟢 Real-Time Duty Status: Updated to "${nextStatus}" (Synced with Dispatcher)`);
   };
 
   // Checklist Progression Handler (Issue #7 & #8)

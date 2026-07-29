@@ -100,6 +100,19 @@ app.get('/api/dispatches', (req, res) => {
   res.json({ success: true, data: mockDispatches });
 });
 
+// Update Technician Availability Status (Available / Busy / Offline)
+app.put('/api/technicians/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status, availability } = req.body;
+  const newStatus = status || availability || 'Available';
+  
+  res.json({
+    success: true,
+    message: `Technician ${id} status updated to ${newStatus}`,
+    data: { id, status: newStatus, availability: newStatus, updatedAt: new Date().toISOString() }
+  });
+});
+
 // Create new urgent dispatch / delay / mid-cancellation alert
 app.post('/api/dispatches', (req, res) => {
   const item = req.body;

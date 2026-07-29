@@ -37,33 +37,54 @@ export default function AssignTechnicianModal({
             </div>
           </div>
 
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Select Available Technician</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Select Technician Roster (Real-Time Status)</label>
           
           <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-            {technicians.filter(t => t.status === 'Online').map((tech) => {
+            {technicians.map((tech) => {
+              const isOffline = tech.status === 'Offline';
+              const isBusy = tech.status === 'Busy';
               const isMatch = assigningDispatch.techSpecialty 
                 ? tech.specialty.toLowerCase().includes(assigningDispatch.techSpecialty.toLowerCase()) 
                 : tech.name.toLowerCase() === assigningDispatch.recommendedTech?.toLowerCase();
+
               return (
                 <button
                   key={tech.name}
-                  onClick={() => handleConfirmAssignment(tech.name)}
+                  disabled={isOffline}
+                  onClick={() => !isOffline && handleConfirmAssignment(tech.name)}
                   className={`w-full text-left p-4 rounded-xl border flex justify-between items-center transition-all group ${
-                    isMatch 
-                      ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50' 
-                      : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                    isOffline 
+                      ? 'border-slate-200 bg-slate-100/60 opacity-60 cursor-not-allowed'
+                      : isBusy
+                        ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50'
+                        : isMatch 
+                          ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50' 
+                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-extrabold text-sm text-slate-800 group-hover:text-blue-700">{tech.name}</h4>
-                      {isMatch && (
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                        isOffline 
+                          ? 'bg-slate-200 text-slate-600'
+                          : isBusy
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        ● {tech.status}
+                      </span>
+                      {isMatch && !isOffline && (
                         <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
                           ⭐ Specialty Match
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{tech.specialty} • Zone: {tech.zone}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">
+                      {tech.specialty} • Zone: {tech.zone || 'Bengaluru'}
+                      {isOffline && ' • (Receives No Assignments)'}
+                      {isBusy && ' • (Finishing Existing Work)'}
+                    </p>
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-extrabold text-[#0A2540] block">{tech.assigned} / 6 jobs</span>
