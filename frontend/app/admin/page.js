@@ -1,6 +1,6 @@
 'use client';
 
-import ProtectedRoute from '../../../components/ProtectedRoute';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 import { useState } from 'react';
 import Link from 'next/link';
