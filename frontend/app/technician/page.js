@@ -11,6 +11,7 @@ import TechExtraChargesModal from '../../components/technician/TechExtraChargesM
 import TechDelayModal from '../../components/technician/TechDelayModal';
 import TechAuthModal from '../../components/technician/TechAuthModal';
 import { Info } from 'lucide-react';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function TechnicianModulePage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | jobs | emergency | performance | profile
@@ -246,6 +247,7 @@ export default function TechnicianModulePage() {
   const activePendingCount = jobs.filter(j => j.status !== 'Completed').length;
 
   return (
+    <ProtectedRoute allowedRole="technician">
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex overflow-hidden antialiased">
       
       {/* Desktop Fixed Left Sidebar */}
@@ -390,5 +392,6 @@ export default function TechnicianModulePage() {
       )}
 
     </div>
+    </ProtectedRoute>
   );
 }

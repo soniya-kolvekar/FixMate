@@ -1,5 +1,6 @@
 'use client';
 
+import ProtectedRoute from '../../components/ProtectedRoute';
 import CustomerHeader from '../../components/customer/CustomerHeader';
 import WelcomeBanner from '../../components/customer/WelcomeBanner';
 import QuickActions from '../../components/customer/QuickActions';
@@ -11,6 +12,7 @@ import CustomerFooter from '../../components/customer/CustomerFooter';
 
 export default function CustomerDashboard() {
   return (
+    <ProtectedRoute allowedRole="customer">
     <main className="min-h-screen bg-slate-50">
       <CustomerHeader />
 
@@ -66,5 +68,6 @@ export default function CustomerDashboard() {
 
       <CustomerFooter />
     </main>
+    </ProtectedRoute>
   );
 }
