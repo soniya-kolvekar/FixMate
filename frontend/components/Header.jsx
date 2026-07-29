@@ -40,12 +40,12 @@ export default function Header({ onOpenAuth, currentUser, onLogout }) {
       >
         <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between gap-4">
           
-          {/* Brand Logo Image from Public Assets */}
-          <Link href="/" className="flex items-center shrink-0">
+          {/* Brand Logo Image from Public Assets (Zoomed for prominent visibility) */}
+          <Link href="/" className="flex items-center shrink-0 overflow-visible py-1">
             <img 
               src="/assets/images/logo.png" 
               alt="FixMate Logo" 
-              className="h-12 sm:h-14 md:h-15 w-auto object-contain py-1" 
+              className="h-14 sm:h-16 md:h-18 w-auto object-contain scale-125 origin-left transition-transform hover:scale-130" 
             />
           </Link>
 

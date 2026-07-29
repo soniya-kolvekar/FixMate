@@ -17,19 +17,12 @@ export default function Footer({ onShowToast }) {
           
           {/* Brand Col */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 rounded-xl bg-[#134074] flex items-center justify-center text-white shadow-sm">
-                <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <path d="M14.7 13.3l-3.5 3.5a1.5 1.5 0 0 1-2.1-2.1l3.5-3.5" />
-                  <path d="M14.5 9.5a2.5 2.5 0 0 1 3.5 3.5" />
-                </svg>
-              </div>
-
-              <div className="flex items-baseline text-xl font-black font-heading tracking-tight text-white">
-                <span>Fix</span>
-                <span className="text-[#8DA9C4]">Mate</span>
-              </div>
+            <Link href="/" className="inline-block overflow-visible">
+              <img 
+                src="/assets/images/logo.png" 
+                alt="FixMate Logo" 
+                className="h-14 w-auto object-contain scale-125 origin-left" 
+              />
             </Link>
 
             <p className="text-xs text-slate-400 font-normal leading-relaxed max-w-xs">
