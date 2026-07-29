@@ -27,55 +27,60 @@ export default function AuthModal({
   if (!isOpen) return null;
 
   const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setRole('customer');
-  };
+  setEmail('');
+  setPassword('');
+  setRole('customer');
+};
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      if (authMode === 'login') {
-        // Login
-        const res = await loginUser(email, password);
+  try {
+    if (authMode === 'login') {
+      const res = await loginUser(email, password);
 
-        const userData = await getUserDocument(res.user.uid);
+      const userData = await getUserDocument(res.user.uid);
 
-        if (!userData) {
-          throw new Error('User record not found.');
-        }
-
-        onAuthSuccess(res.user, userData.role);
-
-        onShowToast(`Welcome ${userData.role}!`);
-      } else {
-        // Signup
-        const res = await registerUser(email, password);
-
-        await createUserDocument(res.user.uid, {
-          uid: res.user.uid,
-          email: res.user.email,
-          role: role,
-          createdAt: new Date(),
-        });
-
-        onAuthSuccess(res.user, role);
-
-        onShowToast(
-          `Account created successfully as ${role}!`
-        );
+      if (!userData) {
+        throw new Error('User record not found.');
       }
 
-      resetForm();
-      onClose();
-    } catch (err) {
-      onShowToast(err.message);
-    } finally {
-      setLoading(false);
+      onAuthSuccess(res.user, userData.role, 'login');
+
+      onShowToast(`Welcome ${userData.role}!`);
+    } else {
+      const res = await registerUser(email, password);
+
+      await createUserDocument(res.user.uid, {
+        uid: res.user.uid,
+        email: res.user.email,
+        role,
+        createdAt: new Date(),
+        name: '',
+        age: '',
+        gender: '',
+        mobile: '',
+        address: '',
+        experience: '',
+        skills: [],
+      });
+
+      onAuthSuccess(res.user, role, 'signup');
+
+      onShowToast(
+        `Account created successfully as ${role}!`
+      );
     }
-  };
+
+    resetForm();
+    onClose();
+  } catch (err) {
+    onShowToast(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="modal-overlay">
