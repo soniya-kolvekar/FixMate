@@ -1,4 +1,7 @@
 'use client';
+
+import ProtectedRoute from '../../components/ProtectedRoute';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { 
@@ -63,6 +66,7 @@ export default function AdminDashboard() {
   const sparklineRed = "M 0 10 Q 20 5 40 20 T 80 12 T 120 28 L 120 35 L 0 35 Z";
 
   return (
+    <ProtectedRoute allowedRole="admin">
     <div className="min-h-screen bg-[#F4F6F9] text-slate-800 font-sans flex antialiased">
       
       {/* 1. Left Sidebar */}
@@ -688,5 +692,6 @@ export default function AdminDashboard() {
       )}
 
     </div>
+    </ProtectedRoute>
   );
 }

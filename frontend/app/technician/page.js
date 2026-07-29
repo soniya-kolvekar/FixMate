@@ -252,7 +252,7 @@ export default function TechnicianModulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex overflow-hidden antialiased">
       
       {/* Full-width Sticky Header with StaggeredMenu Overlay */}
       <TechHeader 

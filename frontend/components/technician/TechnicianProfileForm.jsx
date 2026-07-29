@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { auth, db } from '../../lib/firebase/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -31,14 +30,15 @@ export default function TechnicianProfileForm() {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: '',
-    age: '',
-    gender: '',
-    email: '',
-    mobile: '',
-    experience: '',
-    skills: [],
-  });
+  name: '',
+  age: '',
+  gender: '',
+  email: '',
+  mobile: '',
+  experience: '',
+  skills: [],
+  serviceArea: '',
+});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -54,14 +54,15 @@ export default function TechnicianProfileForm() {
   const data = docSnap.data();
 
     setFormData({
-      name: data.name || '',
-      age: data.age || '',
-      gender: data.gender || '',
-      email: data.email || '',
-      mobile: data.mobile || '',
-      experience: data.experience || '',
-      skills: data.skills || [],
-    });
+  name: data.name || '',
+  age: data.age || '',
+  gender: data.gender || '',
+  email: data.email || '',
+  mobile: data.mobile || '',
+  experience: data.experience || '',
+  skills: data.skills || [],
+  serviceArea: data.serviceArea || '',
+});
   }
       } catch (err) {
         console.log(err);
@@ -151,6 +152,10 @@ export default function TechnicianProfileForm() {
     alert('Please select at least one skill.');
     return;
   }
+  if (!formData.serviceArea.trim()) {
+  alert('Please enter your service area.');
+  return;
+}
 
   try {
     const user = auth.currentUser;
@@ -160,14 +165,15 @@ export default function TechnicianProfileForm() {
       return;
     }
 
-    await updateDoc(doc(db, 'users', user.uid), {
-      name: name.trim(),
-      age: Number(age),
-      gender,
-      mobile,
-      experience: Number(experience),
-      skills,
-    });
+      await updateDoc(doc(db, 'users', user.uid), {
+    name: name.trim(),
+    age: Number(age),
+    gender,
+    mobile,
+    experience: Number(experience),
+    skills,
+    serviceArea: formData.serviceArea.trim(),
+  });
 
     alert('Profile updated successfully!');
 
@@ -292,6 +298,24 @@ export default function TechnicianProfileForm() {
             />
           </div>
         </div>
+            <div>
+      <label className="font-medium">
+        Service Area
+      </label>
+
+      <input
+        type="text"
+        name="serviceArea"
+        value={formData.serviceArea}
+        onChange={handleChange}
+        placeholder="e.g. Mangalore, Kasaragod, Udupi"
+        className="w-full mt-2 border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+      />
+
+      <p className="text-sm text-gray-500 mt-1">
+        Enter the cities or areas where you are available to provide services.
+      </p>
+    </div>
                 <div>
           <label className="font-medium">
             Skill Set

@@ -15,10 +15,11 @@ import {
   Phone,
   MapPin,
 } from 'lucide-react';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 
 export default function CustomerProfile() {
   const router = useRouter();
-
+  
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -124,6 +125,7 @@ export default function CustomerProfile() {
   }
 
   return (
+    <ProtectedRoute allowedRole="customer">
     <div className="min-h-screen bg-slate-100 py-10 px-4">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
 
@@ -269,5 +271,6 @@ export default function CustomerProfile() {
 
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
