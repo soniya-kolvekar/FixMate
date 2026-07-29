@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ShieldAlert, MapPin, Clock, DollarSign, Phone, CheckCircle2, XCircle, Flame, Lock } from 'lucide-react';
+import { MapPin, CheckCircle2, Flame, Lock } from 'lucide-react';
 
 export default function TechEmergencyModal({ 
   isOpen, 
@@ -54,12 +54,12 @@ export default function TechEmergencyModal({
 
           <div className="flex justify-between items-center pb-2 border-b border-rose-200/60">
             <span className="font-bold text-slate-500">Proximity Distance</span>
-            <span className="font-extrabold text-[#0A2540]">{emergencyJob.distance || "1.2 miles away"}</span>
+            <span className="font-extrabold text-[#0A2540]">{emergencyJob.distance || "1.2 km away"}</span>
           </div>
 
           <div className="flex justify-between items-center pb-2 border-b border-rose-200/60">
             <span className="font-bold text-slate-500">Estimated Compensation</span>
-            <span className="font-black text-emerald-600 text-sm">${emergencyJob.price || 220.00}</span>
+            <span className="font-black text-emerald-600 text-sm">₹{emergencyJob.price || 1499.00}</span>
           </div>
 
           <div className="pt-1">

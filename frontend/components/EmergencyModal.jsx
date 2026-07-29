@@ -5,7 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [emergencyType, setEmergencyType] = useState('Pipe Burst / Severe Leakage');
+  const [emergencyType, setEmergencyType] = useState('Water Pipe Burst / Severe Leakage');
 
   if (!isOpen) return null;
 
@@ -41,14 +41,14 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-7 space-y-4">
-          <p className="text-xs text-slate-600 font-medium">Nearest emergency technician dispatched within 45 minutes guaranteed.</p>
+          <p className="text-xs text-slate-600 font-medium">Nearest emergency technician dispatched within 45 minutes guaranteed across major Indian cities.</p>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Emergency Issue</label>
             <select 
               value={emergencyType}
               onChange={(e) => setEmergencyType(e.target.value)}
-              className="w-full p-3 rounded-lg border border-slate-300 text-sm font-semibold text-[#0A2540]"
+              className="w-full p-3 rounded-xl border border-slate-300 text-sm font-semibold text-[#0B2545]"
             >
               <option>Water Pipe Burst / Severe Leakage</option>
               <option>Power Outage / Short Circuit</option>
@@ -64,7 +64,7 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210" 
-              className="w-full p-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-red-600" 
+              className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-red-600" 
               required 
             />
           </div>
@@ -75,13 +75,13 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
               type="text" 
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Street address for rapid dispatch" 
-              className="w-full p-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-red-600" 
+              placeholder="e.g. 104 Bandra West, Mumbai" 
+              className="w-full p-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-red-600" 
               required 
             />
           </div>
 
-          <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition-colors shadow-lg">
+          <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg">
             Dispatch Emergency Technician Now
           </button>
         </form>
