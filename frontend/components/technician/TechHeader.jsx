@@ -1,18 +1,14 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
-  Search, 
   Bell, 
   ShieldAlert, 
-  HelpCircle, 
   ChevronDown, 
-  CheckCircle2, 
-  Clock, 
-  X,
-  AlertTriangle,
-  MessageSquare,
-  Sparkles
+  X
 } from 'lucide-react';
+import { StaggeredMenu } from './StaggeredMenu';
 
 export default function TechHeader({ 
   title, 
@@ -20,129 +16,191 @@ export default function TechHeader({
   onToggleAvailability, 
   notifications = [], 
   onTriggerEmergency,
-  searchQuery = '',
-  setSearchQuery,
-  onOpenAuth
+  activeTab = 'dashboard',
+  setActiveTab,
+  currentUser,
+  onLogout
 }) {
+  const [isScrolled, setIsScrolled] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
 
+  // Detect scroll to toggle subtle shadow & backdrop blur
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const staggeredMenuItems = [
+    { 
+      label: 'Dashboard', 
+      ariaLabel: 'Technician Dashboard', 
+      onClick: () => setActiveTab && setActiveTab('dashboard') 
+    },
+    { 
+      label: 'Assigned Jobs', 
+      ariaLabel: 'View assigned jobs', 
+      onClick: () => setActiveTab && setActiveTab('jobs') 
+    },
+    { 
+      label: 'Emergency Duty', 
+      ariaLabel: 'Emergency broadcasts', 
+      onClick: () => setActiveTab && setActiveTab('emergency') 
+    },
+    { 
+      label: 'Performance', 
+      ariaLabel: 'Earnings and ratings', 
+      onClick: () => setActiveTab && setActiveTab('performance') 
+    },
+    { 
+      label: 'Profile & Settings', 
+      ariaLabel: 'Technician profile', 
+      onClick: () => setActiveTab && setActiveTab('profile') 
+    },
+    { 
+      label: 'Main Home Platform', 
+      ariaLabel: 'Return to home landing page', 
+      link: '/' 
+    }
+  ];
+
+  const socialItems = [
+    { label: 'Emergency Alert', onClick: onTriggerEmergency },
+    { label: 'Main Website', link: '/' }
+  ];
+
   return (
     <>
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-8 py-4 sticky top-0 z-20 flex items-center justify-between gap-6 antialiased">
-        
-        {/* Page Title */}
-        <div>
-          <h2 className="text-2xl font-extrabold text-[#0A2540] tracking-tight">{title}</h2>
-        </div>
-
-        {/* Center Search Input */}
-        <div className="flex items-center gap-6 flex-1 max-w-md">
-          <div className="relative w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search assigned jobs, customer name, or location..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100/90 border border-slate-200/60 rounded-full pl-10 pr-4 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" 
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
-              >
-                &times;
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Right Header Actions */}
-        <div className="flex items-center gap-5">
+      <header 
+        className={`sticky top-0 z-40 h-20 w-full transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/60' 
+            : 'bg-white border-b border-slate-100'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between gap-4">
           
-          {/* Emergency Alert Trigger Button */}
-          <button 
-            onClick={onTriggerEmergency}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-extrabold hover:bg-rose-100 transition-colors shadow-sm"
-          >
-            <ShieldAlert className="w-4 h-4 animate-bounce" />
-            <span className="hidden sm:inline">Emergency Broadcast</span>
-          </button>
+          {/* Left Elements Order: 1. Logo -> 2. Technician Portal Badge -> 3. StaggeredMenu Button */}
+          <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+            
+            {/* 1. Brand Logo Image (Zoomed) */}
+            <Link href="/" className="flex items-center overflow-visible py-1">
+              <img 
+                src="/assets/images/logo.png" 
+                alt="FixMate Logo" 
+                className="h-12 sm:h-14 md:h-15 w-auto object-contain scale-125 origin-left" 
+              />
+            </Link>
 
-          {/* Duty Status Dropdown (Issue #11) */}
-          <div className="relative">
+            {/* 2. Technician Portal Badge */}
+            <span className="inline-flex text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-regalNavy bg-mintCream px-3 py-1 rounded-full border border-powderBlue/40 whitespace-nowrap shadow-2xs">
+              Technician Portal
+            </span>
+
+            {/* 3. StaggeredMenu toggle button (Menu option) */}
+            <StaggeredMenu
+              position="left"
+              items={staggeredMenuItems}
+              socialItems={socialItems}
+              displaySocials={true}
+              displayItemNumbering={true}
+              colors={['#134074', '#13315C', '#0B2545']}
+              logoUrl="/assets/images/logo.png"
+              menuButtonColor="#134074"
+              openMenuButtonColor="#134074"
+              accentColor="#134074"
+              changeMenuColorOnOpen={true}
+            />
+
+          </div>
+
+          {/* Right Action Tools: Duty, Notification, Emergency */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            
+            {/* 1. Duty Status Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                className="flex items-center gap-2 border border-slate-200 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all shadow-sm whitespace-nowrap"
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${
+                  availability === 'ONLINE' || availability === 'Available'
+                    ? 'bg-emerald-500' 
+                    : availability === 'BUSY' || availability === 'Busy'
+                      ? 'bg-amber-500' 
+                      : 'bg-slate-400'
+                }`}></span>
+                <span className="hidden sm:inline">Duty: {availability}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+
+              {showStatusDropdown && (
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200/80 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {[
+                    { label: 'Available', statusKey: 'ONLINE', color: 'bg-emerald-500' },
+                    { label: 'Busy', statusKey: 'BUSY', color: 'bg-amber-500' },
+                    { label: 'Offline', statusKey: 'OFFLINE', color: 'bg-slate-400' }
+                  ].map((st) => (
+                    <button
+                      key={st.label}
+                      onClick={() => {
+                        onToggleAvailability(st.statusKey);
+                        setShowStatusDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full ${st.color}`}></span>
+                      <span>{st.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Notification Center Bell */}
             <button 
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex items-center gap-2 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all shadow-sm"
+              onClick={() => setShowNotificationDrawer(true)}
+              className="relative text-slate-500 hover:text-regalNavy transition-colors p-2 rounded-xl hover:bg-slate-100/60"
+              title="Notifications"
             >
-              <span className={`w-2.5 h-2.5 rounded-full ${
-                availability === 'ONLINE' || availability === 'Available'
-                  ? 'bg-emerald-500' 
-                  : availability === 'BUSY' || availability === 'Busy'
-                    ? 'bg-amber-500' 
-                    : 'bg-slate-400'
-              }`}></span>
-              <span>Duty: {availability}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <Bell className="w-5 h-5" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
+                  {notifications.length}
+                </span>
+              )}
             </button>
 
-            {showStatusDropdown && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200/80 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                {[
-                  { label: 'Available', statusKey: 'ONLINE', color: 'bg-emerald-500' },
-                  { label: 'Busy', statusKey: 'BUSY', color: 'bg-amber-500' },
-                  { label: 'Offline', statusKey: 'OFFLINE', color: 'bg-slate-400' }
-                ].map((st) => (
-                  <button
-                    key={st.label}
-                    onClick={() => {
-                      onToggleAvailability(st.statusKey);
-                      setShowStatusDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
-                  >
-                    <span className={`w-2.5 h-2.5 rounded-full ${st.color}`}></span>
-                    <span>{st.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* 3. Emergency Broadcast Trigger */}
+            <button 
+              onClick={onTriggerEmergency}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-extrabold hover:bg-rose-100 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <ShieldAlert className="w-4 h-4 animate-bounce" />
+              <span className="hidden sm:inline">Emergency</span>
+            </button>
+
           </div>
 
-          {/* Notification Center Trigger (Issue #13) */}
-          <button 
-            onClick={() => setShowNotificationDrawer(true)}
-            className="relative text-slate-500 hover:text-[#0A2540] transition-colors p-1"
-          >
-            <Bell className="w-5 h-5" />
-            {notifications.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
-                {notifications.length}
-              </span>
-            )}
-          </button>
-
-          {/* Auth Modal Trigger */}
-          <button 
-            onClick={() => onOpenAuth && onOpenAuth('login')}
-            className="text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            Sign In
-          </button>
         </div>
-
       </header>
 
-      {/* Technician Notification Drawer (Issue #13) */}
+      {/* Technician Notification Drawer */}
       {showNotificationDrawer && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between border-l border-slate-200">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-base font-extrabold text-[#0A2540]">Notification Center</h3>
+                  <Bell className="w-5 h-5 text-regalNavy" />
+                  <h3 className="text-base font-extrabold font-heading text-prussianBlue">Notification Center</h3>
                 </div>
                 <button 
                   onClick={() => setShowNotificationDrawer(false)}
@@ -159,9 +217,9 @@ export default function TechHeader({
                   </p>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                    <div key={n.id} className="p-3.5 rounded-2xl bg-mintCream/50 border border-slate-100 space-y-1">
                       <div className="flex justify-between items-start">
-                        <h5 className="text-xs font-extrabold text-[#0A2540]">{n.title}</h5>
+                        <h5 className="text-xs font-extrabold text-prussianBlue">{n.title}</h5>
                         <span className="text-[10px] font-bold text-slate-400">{n.time}</span>
                       </div>
                       <p className="text-xs text-slate-600 font-medium">{n.message}</p>
