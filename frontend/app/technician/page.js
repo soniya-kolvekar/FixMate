@@ -184,6 +184,15 @@ export default function TechnicianModulePage() {
     setEmergencyModalOpen(false);
     setSelectedJob(emgJob);
     
+    // Synchronize removal from Dispatcher Urgent Broadcast list
+    try {
+      fetch(`http://localhost:5000/api/dispatches/${emgJob.id}`, { method: 'DELETE' }).catch(() => {});
+      const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+      const updated = local.filter(d => d.id !== emgJob.id && d.title !== emgJob.title);
+      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+    } catch (e) {}
+
     const notif = {
       id: Date.now(),
       title: 'Emergency Job Locked',
