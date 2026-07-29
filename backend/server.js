@@ -10,16 +10,16 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// In-Memory Data / Mock Database Storage
+// In-Memory Data / Mock Database Storage (Tailored to India)
 const servicesCatalog = [
-  { id: 'plumbing', name: 'Plumbing', price: 49, icon: '🔧', desc: 'Pipe repair, leak fixing, tap installation' },
-  { id: 'electrical', name: 'Electrical', price: 59, icon: '⚡', desc: 'Wiring, circuit breaker, lighting fixtures' },
-  { id: 'ac_service', name: 'AC Service', price: 69, icon: '❄️', desc: 'Air conditioning cleaning & duct maintenance' },
-  { id: 'carpentry', name: 'Carpentry', price: 79, icon: '🔨', desc: 'Furniture assembly & custom woodwork' },
-  { id: 'painting', name: 'Painting', price: 149, icon: '🎨', desc: 'Interior & exterior home painting' },
-  { id: 'cleaning', name: 'Cleaning', price: 89, icon: '🧹', desc: 'Deep sanitation & carpet cleaning' },
-  { id: 'appliances', name: 'Appliances', price: 59, icon: '⚙️', desc: 'Refrigerator, oven & washer repairs' },
-  { id: 'pest_control', name: 'Pest Control', price: 99, icon: '🛡️', desc: 'Eco-friendly pest inspection & removal' }
+  { id: 'plumbing', name: 'Plumbing', price: 399, desc: 'Pipe repair, leak fixing, tap installation' },
+  { id: 'electrical', name: 'Electrical', price: 499, desc: 'Wiring, circuit breaker, lighting fixtures' },
+  { id: 'ac_service', name: 'AC Service', price: 699, desc: 'Air conditioning cleaning & gas maintenance' },
+  { id: 'carpentry', name: 'Carpentry', price: 599, desc: 'Furniture assembly & custom woodwork' },
+  { id: 'painting', name: 'Painting', price: 1499, desc: 'Interior & exterior home painting' },
+  { id: 'cleaning', name: 'Cleaning', price: 899, desc: 'Deep sanitation & carpet cleaning' },
+  { id: 'appliances', name: 'Appliances', price: 499, desc: 'Refrigerator, microwave & washer repairs' },
+  { id: 'pest_control', name: 'Pest Control', price: 999, desc: 'Eco-friendly pest inspection & removal' }
 ];
 
 const mockBookings = [];
@@ -31,17 +31,17 @@ const portalDashboards = {
     role: 'Customer',
     activeBooking: { id: 'FM-9841', service: 'Plumbing Repair', status: 'Technician En Route', eta: '14 mins' },
     history: [
-      { id: 'FM-7712', service: 'AC Maintenance', date: '2026-06-15', cost: '$69.00', status: 'Completed' },
-      { id: 'FM-6029', service: 'Electrical Fix', date: '2026-05-02', cost: '$59.00', status: 'Completed' }
+      { id: 'FM-7712', service: 'AC Maintenance', date: '2026-06-15', cost: '₹699.00', status: 'Completed' },
+      { id: 'FM-6029', service: 'Electrical Fix', date: '2026-05-02', cost: '₹499.00', status: 'Completed' }
     ]
   },
   technician: {
     title: 'Technician Job Hub',
     role: 'Technician',
-    technicianName: 'Alex Vance (Master Plumber)',
+    technicianName: 'Rajesh Kumar (Master Plumber)',
     assignedJobs: [
-      { id: 'JOB-301', customer: 'Sarah Jenkins', service: 'Sink Overflow Repair', address: '742 Evergreen Terr.', time: '10:30 AM', price: '$120.00' },
-      { id: 'JOB-302', customer: 'David Kim', service: 'Water Heater Check', address: '104 Maple Ave.', time: '02:00 PM', price: '$95.00' }
+      { id: 'JOB-301', customer: 'Priya Sharma', service: 'Sink Overflow Repair', address: '104 Indiranagar 10th Main, Bengaluru', time: '10:30 AM', price: '₹499.00' },
+      { id: 'JOB-302', customer: 'Aarav Mehta', service: 'Geyser Pressure Check', address: '742 Bandra West, Mumbai', time: '02:00 PM', price: '₹699.00' }
     ]
   },
   dispatcher: {
@@ -49,15 +49,15 @@ const portalDashboards = {
     role: 'Dispatcher',
     metrics: { activeTechnicians: 18, pendingDispatches: 2, avgResponseMinutes: 16 },
     routes: [
-      { zone: 'North Metro', techCount: 6, status: 'Optimal' },
-      { zone: 'Downtown Sector', techCount: 8, status: 'High Demand' },
-      { zone: 'South Suburbs', techCount: 4, status: 'Normal' }
+      { zone: 'Indiranagar & HSR, Bengaluru', techCount: 6, status: 'Optimal' },
+      { zone: 'Bandra & Juhu, Mumbai', techCount: 8, status: 'High Demand' },
+      { zone: 'Connaught Place, Delhi', techCount: 4, status: 'Normal' }
     ]
   },
   admin: {
     title: 'Admin Command Center',
     role: 'Admin',
-    analytics: { totalUsers: 14250, completedJobs: 15480, satisfactionRate: '98.6%', monthlyRevenue: '$210,400' },
+    analytics: { totalUsers: 14250, completedJobs: 15480, satisfactionRate: '98.6%', monthlyRevenue: '₹21,04,000' },
     pendingApprovals: 4
   }
 };
@@ -86,7 +86,7 @@ app.post('/api/bookings', (req, res) => {
     serviceId,
     address,
     dateTime: dateTime || new Date().toISOString(),
-    customerEmail: customerEmail || 'guest@fixmate.io',
+    customerEmail: customerEmail || 'guest@fixmate.in',
     createdAt: new Date().toISOString(),
     status: 'Confirmed'
   };
@@ -108,7 +108,7 @@ app.post('/api/emergency', (req, res) => {
     phone,
     address,
     etaMinutes: Math.floor(15 + Math.random() * 20),
-    assignedTechnician: 'Officer Mark Davies (Emergency Crew #4)',
+    assignedTechnician: 'Officer Rajesh Kumar (Emergency Unit #4)',
     timestamp: new Date().toISOString()
   };
 
@@ -127,5 +127,5 @@ app.get('/api/portals/:role', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 FixMate Node.js Backend running on http://localhost:${PORT}`);
+  console.log(`FixMate Node.js Backend running on http://localhost:${PORT}`);
 });

@@ -1,23 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary-navy: #0A2540;
-  --primary-navy-hover: #13395F;
-  --accent-blue: #2563EB;
-  --accent-blue-light: #EFF6FF;
-  --bg-secondary: #F4F7FB;
-  --text-main: #0F172A;
-  --text-muted: #475569;
+  --regal-navy: #134074;
+  --oxford-navy: #13315C;
+  --prussian-blue: #0B2545;
+  --powder-blue: #8DA9C4;
+  --mint-cream: #EEF4ED;
+  
+  --semantic-success: #22C55E;
+  --semantic-warning: #F59E0B;
+  --semantic-error: #EF4444;
+  --semantic-info: #3B82F6;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  color: var(--text-main);
-  background-color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  color: #0B2545;
+  background-color: #EEF4ED;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Manrope', sans-serif;
 }
 
 /* Modal Backdrop */
@@ -27,19 +39,31 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(10, 37, 64, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(11, 37, 69, 0.65);
+  backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-@keyframes pulseSlow {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+/* Nav Link Underline Hover Effect */
+.nav-link {
+  position: relative;
+  transition: color 0.2s ease;
 }
 
-.animate-pulse-slow {
-  animation: pulseSlow 3s infinite ease-in-out;
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: #134074;
+  transition: width 0.25s ease-in-out;
+}
+
+.nav-link:hover::after {
+  width: 100%;
 }
