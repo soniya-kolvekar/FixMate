@@ -167,11 +167,9 @@ export default function TechDesktopSidebar({
         {/* User Card & Auth */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <img 
-              src={currentUser?.avatarUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80"}
-              alt="Technician Profile" 
-              className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
-            />
+            <div className="w-8 h-8 rounded-full bg-[#134074] text-white flex items-center justify-center shrink-0 shadow-sm border border-slate-200">
+              <User className="w-4 h-4 text-white" />
+            </div>
             <div className="truncate">
               <h4 className="text-xs font-extrabold text-[#0A2540] truncate leading-tight">
                 {currentUser?.name || "Alex Vance"}

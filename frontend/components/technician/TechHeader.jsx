@@ -104,7 +104,7 @@ export default function TechHeader({
               Technician Portal
             </span>
 
-            {/* 3. StaggeredMenu toggle button (Menu option) */}
+            {/* 3. StaggeredMenu toggle button (Menu option opening on the left) */}
             <StaggeredMenu
               position="left"
               items={staggeredMenuItems}

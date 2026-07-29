@@ -1,5 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { auth, db } from '../../lib/firebase/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import TechHeader from '../../components/technician/TechHeader';
 import TechDashboard from '../../components/technician/TechDashboard';
 import TechJobList from '../../components/technician/TechJobList';
@@ -27,9 +31,39 @@ export default function TechnicianModulePage() {
     specialization: 'Master Plumber',
     experienceYears: '8',
     workingArea: 'Indiranagar & HSR, Bengaluru',
-    avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
     status: 'Available'
   });
+
+  // Real-time Firebase Sync for logged in Technician
+  useEffect(() => {
+    let unsubscribeDoc = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setCurrentUser(prev => ({
+              ...prev,
+              uid: user.uid,
+              name: data.name || data.fullName || user.displayName || prev.name,
+              email: data.email || user.email || prev.email,
+              phone: data.phone || data.mobile || prev.phone,
+              specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
+              experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
+              workingArea: data.workingArea || data.serviceArea || prev.workingArea,
+              avatarUrl: data.avatarUrl || prev.avatarUrl
+            }));
+          }
+        });
+      }
+    });
+
+    return () => {
+      if (unsubscribeDoc) unsubscribeDoc();
+      unsubscribeAuth();
+    };
+  }, []);
 
   // Daily Workload Capacity Rule (Issue #10: Max 6 assigned jobs per day)
   const MAX_DAILY_CAPACITY = 6;
@@ -252,134 +286,136 @@ export default function TechnicianModulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex overflow-hidden antialiased">
-      
-      {/* Full-width Sticky Header with StaggeredMenu Overlay */}
-      <TechHeader 
-        title={getPageTitle()}
-        availability={availability}
-        onToggleAvailability={handleToggleAvailability}
-        notifications={notifications}
-        onTriggerEmergency={() => setEmergencyModalOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setSelectedJob(null);
-        }}
-        currentUser={currentUser}
-      />
+    <ProtectedRoute allowedRole="technician">
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+        
+        {/* Full-width Sticky Header with StaggeredMenu Overlay & ProtectedRoute */}
+        <TechHeader 
+          title={getPageTitle()}
+          availability={availability}
+          onToggleAvailability={handleToggleAvailability}
+          notifications={notifications}
+          onTriggerEmergency={() => setEmergencyModalOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setSelectedJob(null);
+          }}
+          currentUser={currentUser}
+        />
 
-      {/* Full Width Dashboard Screen Body */}
-      <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
-        {selectedJob ? (
-          <TechJobDetail 
-            job={selectedJob}
-            onBack={() => setSelectedJob(null)}
-            onUpdateStatus={handleUpdateStatus}
-            onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
-            onOpenReportDelay={() => setDelayModalOpen(true)}
-          />
-        ) : (
-          <>
-            {activeTab === 'dashboard' && (
-              <TechDashboard 
-                jobs={jobs}
-                onSelectJob={(j) => setSelectedJob(j)}
-                onViewAllJobs={() => setActiveTab('jobs')}
-                onTriggerEmergency={() => setEmergencyModalOpen(true)}
-                maxCapacity={MAX_DAILY_CAPACITY}
-              />
-            )}
+        {/* Full Width Dashboard Screen Body */}
+        <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
+          {selectedJob ? (
+            <TechJobDetail 
+              job={selectedJob}
+              onBack={() => setSelectedJob(null)}
+              onUpdateStatus={handleUpdateStatus}
+              onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
+              onOpenReportDelay={() => setDelayModalOpen(true)}
+            />
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <TechDashboard 
+                  jobs={jobs}
+                  onSelectJob={(j) => setSelectedJob(j)}
+                  onViewAllJobs={() => setActiveTab('jobs')}
+                  onTriggerEmergency={() => setEmergencyModalOpen(true)}
+                  maxCapacity={MAX_DAILY_CAPACITY}
+                />
+              )}
 
-            {activeTab === 'jobs' && (
-              <TechJobList 
-                jobs={jobs}
-                onSelectJob={(j) => setSelectedJob(j)}
-              />
-            )}
-
-            {activeTab === 'emergency' && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
-                    <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
-                  </div>
-                  <button 
-                    onClick={() => setEmergencyModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
-                  >
-                    Open Live Emergency Overlay
-                  </button>
-                </div>
+              {activeTab === 'jobs' && (
                 <TechJobList 
-                  jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                  jobs={jobs}
                   onSelectJob={(j) => setSelectedJob(j)}
                 />
-              </div>
-            )}
+              )}
 
-            {activeTab === 'performance' && (
-              <TechProfile 
-                availability={availability}
-                onToggleAvailability={handleToggleAvailability}
-                currentUser={currentUser}
-                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-              />
-            )}
+              {activeTab === 'emergency' && (
+                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
+                      <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
+                    </div>
+                    <button 
+                      onClick={() => setEmergencyModalOpen(true)}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
+                    >
+                      Open Live Emergency Overlay
+                    </button>
+                  </div>
+                  <TechJobList 
+                    jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                    onSelectJob={(j) => setSelectedJob(j)}
+                  />
+                </div>
+              )}
 
-            {activeTab === 'profile' && (
-              <TechProfile 
-                availability={availability}
-                onToggleAvailability={handleToggleAvailability}
-                currentUser={currentUser}
-                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-              />
-            )}
-          </>
+              {activeTab === 'performance' && (
+                <TechProfile 
+                  availability={availability}
+                  onToggleAvailability={handleToggleAvailability}
+                  currentUser={currentUser}
+                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                />
+              )}
+
+              {activeTab === 'profile' && (
+                <TechProfile 
+                  availability={availability}
+                  onToggleAvailability={handleToggleAvailability}
+                  currentUser={currentUser}
+                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                />
+              )}
+            </>
+          )}
+        </main>
+
+        {/* Modals & Overlays */}
+        <TechAuthModal 
+          isOpen={authModal.isOpen}
+          mode={authModal.mode}
+          onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
+          onAuthSuccess={handleAuthSuccess}
+        />
+
+        <TechEmergencyModal 
+          isOpen={emergencyModalOpen}
+          emergencyJob={mockEmergencyJob}
+          onAccept={handleAcceptEmergency}
+          onDecline={() => setEmergencyModalOpen(false)}
+        />
+
+        <TechExtraChargesModal 
+          isOpen={extraChargesModalOpen}
+          job={selectedJob}
+          onClose={() => setExtraChargesModalOpen(false)}
+          onAddCharges={handleAddExtraCharges}
+        />
+
+        <TechDelayModal 
+          isOpen={delayModalOpen}
+          job={selectedJob}
+          onClose={() => setDelayModalOpen(false)}
+          onReportDelay={handleReportDelay}
+        />
+
+        {/* Toast Notification Popup */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold animate-in slide-in-from-bottom duration-300 border border-white/10">
+            <Info className="w-5 h-5 text-blue-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
         )}
-      </main>
 
-      {/* Modals & Overlays */}
-      <TechAuthModal 
-        isOpen={authModal.isOpen}
-        mode={authModal.mode}
-        onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
-        onAuthSuccess={handleAuthSuccess}
-      />
-
-      <TechEmergencyModal 
-        isOpen={emergencyModalOpen}
-        emergencyJob={mockEmergencyJob}
-        onAccept={handleAcceptEmergency}
-        onDecline={() => setEmergencyModalOpen(false)}
-      />
-
-      <TechExtraChargesModal 
-        isOpen={extraChargesModalOpen}
-        job={selectedJob}
-        onClose={() => setExtraChargesModalOpen(false)}
-        onAddCharges={handleAddExtraCharges}
-      />
-
-      <TechDelayModal 
-        isOpen={delayModalOpen}
-        job={selectedJob}
-        onClose={() => setDelayModalOpen(false)}
-        onReportDelay={handleReportDelay}
-      />
-
-      {/* Toast Notification Popup */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold animate-in slide-in-from-bottom duration-300 border border-white/10">
-          <Info className="w-5 h-5 text-blue-400 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
