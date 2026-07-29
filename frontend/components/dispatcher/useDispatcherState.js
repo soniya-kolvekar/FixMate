@@ -187,12 +187,56 @@ export default function useDispatcherState() {
 
   // Technicians List
   const [technicians, setTechnicians] = useState([
-    { name: 'Dave R.', assigned: 4, travel: 2, status: 'Online', specialty: 'Plumbing', zone: 'North Metro' },
-    { name: 'Sarah J.', assigned: 3, travel: 4, status: 'Online', specialty: 'Electrical', zone: 'Downtown Sector' },
-    { name: 'Mike T.', assigned: 5, travel: 1, status: 'Online', specialty: 'HVAC', zone: 'Downtown Sector' },
-    { name: 'Elena K.', assigned: 2, travel: 3, status: 'Online', specialty: 'Carpentry', zone: 'South Suburbs' },
+    { name: 'Rajesh Kumar', assigned: 2, travel: 1, status: 'Available', specialty: 'Plumbing', zone: 'Indiranagar & HSR, Bengaluru' },
+    { name: 'Dave R.', assigned: 4, travel: 2, status: 'Available', specialty: 'Plumbing', zone: 'North Metro' },
+    { name: 'Sarah J.', assigned: 3, travel: 4, status: 'Available', specialty: 'Electrical', zone: 'Downtown Sector' },
+    { name: 'Mike T.', assigned: 5, travel: 1, status: 'Busy', specialty: 'HVAC', zone: 'Downtown Sector' },
+    { name: 'Elena K.', assigned: 2, travel: 3, status: 'Available', specialty: 'Carpentry', zone: 'South Suburbs' },
     { name: 'James L.', assigned: 1, travel: 1, status: 'Offline', specialty: 'Appliance Repair', zone: 'West District' }
   ]);
+
+  // Live Firestore subscription for Technicians Roster & Real-Time Availability Status
+  useEffect(() => {
+    let unsubTechs = null;
+    try {
+      const techsRef = collection(db, 'technicians');
+      unsubTechs = onSnapshot(techsRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const firestoreTechs = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            const rawStatus = data.availability || data.status || 'Available';
+            const formattedStatus = rawStatus === 'ONLINE' ? 'Available' : rawStatus === 'BUSY' ? 'Busy' : rawStatus;
+            return {
+              id: docSnap.id,
+              name: data.name || data.fullName || 'Rajesh Kumar',
+              assigned: data.assignedJobsCount || 2,
+              travel: 1,
+              status: formattedStatus,
+              specialty: data.specialization || (Array.isArray(data.skills) ? data.skills.join(', ') : data.specialty) || 'Plumbing',
+              zone: data.workingArea || data.serviceArea || data.zone || 'Indiranagar & HSR, Bengaluru'
+            };
+          });
+
+          setTechnicians(prev => {
+            const map = new Map();
+            firestoreTechs.forEach(t => map.set(t.name, t));
+            prev.forEach(t => {
+              if (!map.has(t.name)) {
+                map.set(t.name, t);
+              }
+            });
+            return Array.from(map.values());
+          });
+        }
+      }, (err) => console.warn('Technicians subscription warning:', err));
+    } catch(err) {
+      console.warn('Firestore error:', err);
+    }
+
+    return () => {
+      if (unsubTechs) unsubTechs();
+    };
+  }, []);
 
   // Live Technicians (Hyderabad Sector Fleet)
   const [liveTechnicians, setLiveTechnicians] = useState([
