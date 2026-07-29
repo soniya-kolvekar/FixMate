@@ -397,14 +397,14 @@ export const StaggeredMenu = ({
 
       <aside id="staggered-menu-panel" ref={panelRef} className="staggered-menu-panel" aria-hidden={!open}>
         <div className="sm-panel-inner">
-          <div className="sm-panel-header pb-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="sm-panel-header pb-4 border-b border-slate-100 flex items-center gap-4 overflow-visible py-1">
             <img
               src={logoUrl}
               alt="FixMate Logo"
-              className="h-10 w-auto object-contain scale-110 origin-left"
+              className="h-12 sm:h-14 md:h-15 w-auto object-contain scale-125 origin-left"
               draggable={false}
             />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-regalNavy bg-mintCream px-2.5 py-1 rounded-full border border-powderBlue/40">
+            <span className="inline-flex text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-regalNavy bg-mintCream px-3 py-1 rounded-full border border-powderBlue/40 whitespace-nowrap shadow-2xs">
               Technician Portal
             </span>
           </div>
