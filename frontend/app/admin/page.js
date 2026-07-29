@@ -191,7 +191,7 @@ export default function AdminDashboard() {
                   <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">$1,284,500</div>
+              <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">₹1,28,45,000</div>
               <div className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                 <span>↑ 12.5% vs last month</span>
               </div>
@@ -516,7 +516,7 @@ export default function AdminDashboard() {
                     <path className="text-amber-500" strokeDasharray="5, 100" strokeDashoffset="-95" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
                   <div className="absolute text-center">
-                    <div className="text-sm font-black text-[#0F2A4A]">$1.2M</div>
+                    <div className="text-sm font-black text-[#0F2A4A]">₹1.2Cr</div>
                     <div className="text-[9px] font-bold text-slate-400">Total</div>
                   </div>
                 </div>
@@ -525,23 +525,23 @@ export default function AdminDashboard() {
                 <div className="space-y-1.5 flex-1 text-xs font-semibold">
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Plumbing (35%)</span>
-                    <span className="font-bold text-[#0F2A4A]">$448K</span>
+                    <span className="font-bold text-[#0F2A4A]">₹44.8L</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Electrical (30%)</span>
-                    <span className="font-bold text-[#0F2A4A]">$384K</span>
+                    <span className="font-bold text-[#0F2A4A]">₹38.4L</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#0F2A4A]"></span> HVAC (20%)</span>
-                    <span className="font-bold text-[#0F2A4A]">$256K</span>
+                    <span className="font-bold text-[#0F2A4A]">₹25.6L</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Cleaning (10%)</span>
-                    <span className="font-bold text-[#0F2A4A]">$128K</span>
+                    <span className="font-bold text-[#0F2A4A]">₹12.8L</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Other (5%)</span>
-                    <span className="font-bold text-[#0F2A4A]">$64K</span>
+                    <span className="font-bold text-[#0F2A4A]">₹6.4L</span>
                   </div>
                 </div>
 
@@ -560,10 +560,10 @@ export default function AdminDashboard() {
 
               <div className="space-y-3">
                 {[
-                  { rank: 1, name: 'James Smith', role: 'Plumbing Specialist', rating: '98%', jobs: '142 jobs', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80' },
-                  { rank: 2, name: 'Maria Johnson', role: 'Electrical Expert', rating: '96%', jobs: '128 jobs', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80' },
-                  { rank: 3, name: 'Robert Davis', role: 'HVAC Technician', rating: '94%', jobs: '115 jobs', img: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80' },
-                  { rank: 4, name: 'David Wilson', role: 'General Maintenance', rating: '92%', jobs: '108 jobs', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' }
+                  { rank: 1, name: 'Rajesh Kumar', role: 'Plumbing Specialist', rating: '98%', jobs: '142 jobs', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=80' },
+                  { rank: 2, name: 'Priya Sharma', role: 'Electrical Expert', rating: '96%', jobs: '128 jobs', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80' },
+                  { rank: 3, name: 'Vikram Malhotra', role: 'HVAC Technician', rating: '94%', jobs: '115 jobs', img: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80' },
+                  { rank: 4, name: 'Aarav Mehta', role: 'General Maintenance', rating: '92%', jobs: '108 jobs', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' }
                 ].map((tech) => (
                   <div key={tech.rank} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">

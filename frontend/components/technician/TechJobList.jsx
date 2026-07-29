@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Briefcase, MapPin, Clock, User, ChevronRight, Search, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { MapPin, Search, User } from 'lucide-react';
 
 export default function TechJobList({ jobs = [], onSelectJob }) {
   const [filterTab, setFilterTab] = useState('All');
@@ -91,7 +91,7 @@ export default function TechJobList({ jobs = [], onSelectJob }) {
 
                 <div className="text-right">
                   <span className="text-base font-black text-[#0A2540]">
-                    ${(job.price + (job.extraCharges || 0)).toFixed(2)}
+                    ₹{(job.price + (job.extraCharges || 0)).toFixed(2)}
                   </span>
                 </div>
               </div>
