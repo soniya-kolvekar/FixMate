@@ -211,7 +211,7 @@ export default function AdminDashboard() {
               </div>
               <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">1,482</div>
               <div className="text-xs font-semibold text-slate-500">
-                .86.4% Currently Online
+                86.4% Currently Online
               </div>
             </div>
 
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-rose-500">Pending Emergencies</span>
                 <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
-                  <ShieldAlert className="w-4 h-4 animate-bounce" />
+                  <ShieldAlert className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-2xl font-black text-rose-600 tracking-tight">14</div>
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-slate-400">Customer Satisfaction</span>
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <span className="text-base">😊</span>
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">4.82/5</div>
@@ -362,7 +362,6 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 className="text-base font-extrabold text-[#0F2A4A]">Live Activity</h3>
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
               </div>
 
               <div className="space-y-4">
@@ -419,78 +418,85 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             
             {/* Today's Bookings */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3 relative overflow-hidden">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-blue-600" /> Today's Bookings
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  Today's Bookings
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  ↑ 18%
                 </span>
               </div>
-              <div className="text-2xl font-black text-[#0F2A4A]">247</div>
-              <div className="text-xs font-bold text-emerald-600">↑ 18% vs yesterday</div>
-              
-              {/* Mini Sparkline Background */}
-              <div className="h-9 w-full opacity-40">
-                <svg className="w-full h-full" viewBox="0 0 120 35">
-                  <path d={sparklineBlue} fill="#1B4DFF" />
-                </svg>
+              <div>
+                <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">247</div>
+                <div className="text-[11px] font-medium text-slate-400 mt-0.5">vs 209 yesterday</div>
               </div>
             </div>
 
             {/* Jobs In Progress */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3 relative overflow-hidden">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  <Briefcase className="w-4 h-4 text-amber-500" /> Jobs In Progress
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                  Jobs In Progress
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  ↑ 8%
                 </span>
               </div>
-              <div className="text-2xl font-black text-[#0F2A4A]">96</div>
-              <div className="text-xs font-bold text-emerald-600">↑ 8% vs yesterday</div>
-
-              <div className="h-9 w-full opacity-40">
-                <svg className="w-full h-full" viewBox="0 0 120 35">
-                  <path d={sparklineOrange} fill="#F59E0B" />
-                </svg>
+              <div>
+                <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">96</div>
+                <div className="text-[11px] font-medium text-slate-400 mt-0.5">Active field teams</div>
               </div>
             </div>
 
             {/* Completed Today */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3 relative overflow-hidden">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Completed Today
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  Completed Today
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  ↑ 14%
                 </span>
               </div>
-              <div className="text-2xl font-black text-[#0F2A4A]">138</div>
-              <div className="text-xs font-bold text-emerald-600">↑ 14% vs yesterday</div>
-
-              <div className="h-9 w-full opacity-40">
-                <svg className="w-full h-full" viewBox="0 0 120 35">
-                  <path d={sparklineGreen} fill="#10B981" />
-                </svg>
+              <div>
+                <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">138</div>
+                <div className="text-[11px] font-medium text-slate-400 mt-0.5">99.1% completion rate</div>
               </div>
             </div>
 
             {/* Cancelled Today */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3 relative overflow-hidden">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  <XCircle className="w-4 h-4 text-rose-500" /> Cancelled Today
+                <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
+                    <XCircle className="w-4 h-4" />
+                  </div>
+                  Cancelled Today
+                </span>
+                <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                  ↓ 5%
                 </span>
               </div>
-              <div className="text-2xl font-black text-[#0F2A4A]">13</div>
-              <div className="text-xs font-bold text-rose-500">↓ 5% vs yesterday</div>
-
-              <div className="h-9 w-full opacity-40">
-                <svg className="w-full h-full" viewBox="0 0 120 35">
-                  <path d={sparklineRed} fill="#EF4444" />
-                </svg>
+              <div>
+                <div className="text-2xl font-black text-[#0F2A4A] tracking-tight">13</div>
+                <div className="text-[11px] font-medium text-slate-400 mt-0.5">5.2% cancel rate</div>
               </div>
             </div>
 
           </div>
 
-          {/* Revenue by Category + Top Technicians + Real-time Field Map */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue by Category + Top Technicians */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Revenue by Service Category (Donut Chart) */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-sm space-y-4">
@@ -587,27 +593,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Real-time Field Map Card */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-sm flex flex-col justify-between space-y-4">
-              <h3 className="text-base font-extrabold text-[#0F2A4A]">Real-time Field Map</h3>
-              
-              {/* Futuristic Map Visual Card */}
-              <div className="relative h-44 rounded-xl bg-[#0B1E36] overflow-hidden flex flex-col justify-end p-4 shadow-inner">
-                <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:10px_10px] opacity-30"></div>
-                <div className="absolute top-4 left-6 w-20 h-20 rounded-full border border-blue-500/30 animate-ping"></div>
-                <div className="absolute top-8 right-10 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400"></div>
-                <div className="absolute bottom-10 left-12 w-2.5 h-2.5 rounded-full bg-blue-400 shadow-md shadow-blue-400"></div>
-                <div className="absolute top-6 left-16 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-md shadow-amber-400"></div>
-                
-                <button 
-                  onClick={() => showToastMsg('Opening Real-time GPS Field Map...')}
-                  className="relative z-10 w-fit bg-[#0F2A4A] hover:bg-[#1A3D68] text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition-all flex items-center gap-1.5"
-                >
-                  <span>View Full Map</span>
-                </button>
-              </div>
-            </div>
-
           </div>
 
           {/* Bottom Table: Recent Bookings */}
@@ -639,11 +624,11 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                   {[
-                    { id: '#HS-2024-8761', customer: 'John Doe', service: 'Plumbing Repair', tech: 'James Smith', status: 'In Progress', statusColor: 'bg-blue-100 text-blue-700', time: 'May 25, 2024 · 10:00 AM', amount: '$120.00' },
-                    { id: '#HS-2024-8760', customer: 'Sarah Wilson', service: 'AC Installation', tech: 'Maria Johnson', status: 'Assigned', statusColor: 'bg-amber-100 text-amber-700', time: 'May 25, 2024 · 11:30 AM', amount: '$350.00' },
-                    { id: '#HS-2024-8759', customer: 'Mike Brown', service: 'Electrical Wiring', tech: 'Robert Davis', status: 'Completed', statusColor: 'bg-emerald-100 text-emerald-700', time: 'May 25, 2024 · 09:00 AM', amount: '$180.00' },
-                    { id: '#HS-2024-8758', customer: 'Lisa Anderson', service: 'Deep Cleaning', tech: 'David Wilson', status: 'Scheduled', statusColor: 'bg-purple-100 text-purple-700', time: 'May 26, 2024 · 02:00 PM', amount: '$90.00' },
-                    { id: '#HS-2024-8757', customer: 'David Lee', service: 'Water Heater Fix', tech: 'James Smith', status: 'Pending', statusColor: 'bg-rose-100 text-rose-700', time: 'May 26, 2024 · 04:30 PM', amount: '$150.00' }
+                    { id: '#HS-2024-8761', customer: 'John Doe', service: 'Plumbing Repair', tech: 'James Smith', status: 'In Progress', statusColor: 'bg-blue-100 text-blue-700', time: 'May 25, 2024 · 10:00 AM', amount: '₹1,499' },
+                    { id: '#HS-2024-8760', customer: 'Sarah Wilson', service: 'AC Installation', tech: 'Maria Johnson', status: 'Assigned', statusColor: 'bg-amber-100 text-amber-700', time: 'May 25, 2024 · 11:30 AM', amount: '₹3,500' },
+                    { id: '#HS-2024-8759', customer: 'Mike Brown', service: 'Electrical Wiring', tech: 'Robert Davis', status: 'Completed', statusColor: 'bg-emerald-100 text-emerald-700', time: 'May 25, 2024 · 09:00 AM', amount: '₹1,800' },
+                    { id: '#HS-2024-8758', customer: 'Lisa Anderson', service: 'Deep Cleaning', tech: 'David Wilson', status: 'Scheduled', statusColor: 'bg-purple-100 text-purple-700', time: 'May 26, 2024 · 02:00 PM', amount: '₹1,999' },
+                    { id: '#HS-2024-8757', customer: 'David Lee', service: 'Water Heater Fix', tech: 'James Smith', status: 'Pending', statusColor: 'bg-rose-100 text-rose-700', time: 'May 26, 2024 · 04:30 PM', amount: '₹1,299' }
                   ].map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-4 font-extrabold text-blue-600 cursor-pointer hover:underline">{row.id}</td>
