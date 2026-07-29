@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import TechDesktopSidebar from '../../components/technician/TechDesktopSidebar';
 import TechHeader from '../../components/technician/TechHeader';
 import TechDashboard from '../../components/technician/TechDashboard';
 import TechJobList from '../../components/technician/TechJobList';
@@ -243,114 +242,97 @@ export default function TechnicianModulePage() {
     }
   };
 
-  const activePendingCount = jobs.filter(j => j.status !== 'Completed').length;
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex overflow-hidden antialiased">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
       
-      {/* Desktop Fixed Left Sidebar */}
-      <TechDesktopSidebar 
+      {/* Full-width Sticky Header with StaggeredMenu Overlay */}
+      <TechHeader 
+        title={getPageTitle()}
+        availability={availability}
+        onToggleAvailability={handleToggleAvailability}
+        notifications={notifications}
+        onTriggerEmergency={() => setEmergencyModalOpen(true)}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
         activeTab={activeTab}
         setActiveTab={(tab) => {
           setActiveTab(tab);
           setSelectedJob(null);
         }}
-        availability={availability}
-        onToggleAvailability={handleToggleAvailability}
-        pendingCount={activePendingCount}
-        emergencyCount={1}
-        maxDailyCapacity={MAX_DAILY_CAPACITY}
-        onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
         currentUser={currentUser}
       />
 
-      {/* Main Workspace Body */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        
-        {/* Sticky Header */}
-        <TechHeader 
-          title={getPageTitle()}
-          availability={availability}
-          onToggleAvailability={handleToggleAvailability}
-          notifications={notifications}
-          onTriggerEmergency={() => setEmergencyModalOpen(true)}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
-        />
+      {/* Full Width Dashboard Screen Body */}
+      <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
+        {selectedJob ? (
+          <TechJobDetail 
+            job={selectedJob}
+            onBack={() => setSelectedJob(null)}
+            onUpdateStatus={handleUpdateStatus}
+            onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
+            onOpenReportDelay={() => setDelayModalOpen(true)}
+          />
+        ) : (
+          <>
+            {activeTab === 'dashboard' && (
+              <TechDashboard 
+                jobs={jobs}
+                onSelectJob={(j) => setSelectedJob(j)}
+                onViewAllJobs={() => setActiveTab('jobs')}
+                onTriggerEmergency={() => setEmergencyModalOpen(true)}
+                maxCapacity={MAX_DAILY_CAPACITY}
+              />
+            )}
 
-        {/* Content Padding Workspace */}
-        <main className="p-8 max-w-7xl w-full mx-auto flex-1">
-          {selectedJob ? (
-            <TechJobDetail 
-              job={selectedJob}
-              onBack={() => setSelectedJob(null)}
-              onUpdateStatus={handleUpdateStatus}
-              onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
-              onOpenReportDelay={() => setDelayModalOpen(true)}
-            />
-          ) : (
-            <>
-              {activeTab === 'dashboard' && (
-                <TechDashboard 
-                  jobs={jobs}
-                  onSelectJob={(j) => setSelectedJob(j)}
-                  onViewAllJobs={() => setActiveTab('jobs')}
-                  onTriggerEmergency={() => setEmergencyModalOpen(true)}
-                  maxCapacity={MAX_DAILY_CAPACITY}
-                />
-              )}
+            {activeTab === 'jobs' && (
+              <TechJobList 
+                jobs={jobs}
+                onSelectJob={(j) => setSelectedJob(j)}
+              />
+            )}
 
-              {activeTab === 'jobs' && (
-                <TechJobList 
-                  jobs={jobs}
-                  onSelectJob={(j) => setSelectedJob(j)}
-                />
-              )}
-
-              {activeTab === 'emergency' && (
-                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
-                      <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
-                    </div>
-                    <button 
-                      onClick={() => setEmergencyModalOpen(true)}
-                      className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
-                    >
-                      Open Live Emergency Overlay
-                    </button>
+            {activeTab === 'emergency' && (
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
+                    <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
                   </div>
-                  <TechJobList 
-                    jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
-                    onSelectJob={(j) => setSelectedJob(j)}
-                  />
+                  <button 
+                    onClick={() => setEmergencyModalOpen(true)}
+                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
+                  >
+                    Open Live Emergency Overlay
+                  </button>
                 </div>
-              )}
-
-              {activeTab === 'performance' && (
-                <TechProfile 
-                  availability={availability}
-                  onToggleAvailability={handleToggleAvailability}
-                  currentUser={currentUser}
-                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                <TechJobList 
+                  jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                  onSelectJob={(j) => setSelectedJob(j)}
                 />
-              )}
+              </div>
+            )}
 
-              {activeTab === 'profile' && (
-                <TechProfile 
-                  availability={availability}
-                  onToggleAvailability={handleToggleAvailability}
-                  currentUser={currentUser}
-                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-                />
-              )}
-            </>
-          )}
-        </main>
+            {activeTab === 'performance' && (
+              <TechProfile 
+                availability={availability}
+                onToggleAvailability={handleToggleAvailability}
+                currentUser={currentUser}
+                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+              />
+            )}
 
-      </div>
+            {activeTab === 'profile' && (
+              <TechProfile 
+                availability={availability}
+                onToggleAvailability={handleToggleAvailability}
+                currentUser={currentUser}
+                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+              />
+            )}
+          </>
+        )}
+      </main>
 
       {/* Modals & Overlays */}
       <TechAuthModal 
