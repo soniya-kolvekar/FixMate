@@ -63,30 +63,42 @@ export default function Home() {
     }
   };
 
-  const handleAuthSuccess = (user, role) => {
-    setCurrentUser(user);
+ const handleAuthSuccess = (user, role, authMode) => {
+  setCurrentUser(user);
 
+  if (authMode === 'signup') {
     switch (role) {
       case 'customer':
-        router.push('/customer');
-        break;
+        router.push('/customer/profile');
+        return;
 
       case 'technician':
-        router.push('/technician');
-        break;
-
-      case 'dispatcher':
-        router.push('/dispatcher');
-        break;
-
-      case 'admin':
-        router.push('/admin');
-        break;
-
-      default:
-        router.push('/');
+        router.push('/technician/profile');
+        return;
     }
-  };
+  }
+
+  switch (role) {
+    case 'customer':
+      router.push('/customer');
+      break;
+
+    case 'technician':
+      router.push('/technician');
+      break;
+
+    case 'dispatcher':
+      router.push('/dispatcher');
+      break;
+
+    case 'admin':
+      router.push('/admin');
+      break;
+
+    default:
+      router.push('/');
+  }
+};
 
   const openLoginModal = () => setAuthModal({ isOpen: true, mode: 'login' });
 
