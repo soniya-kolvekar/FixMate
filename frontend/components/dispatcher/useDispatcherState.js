@@ -1,10 +1,13 @@
-'use client';
-
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { db } from '../../lib/firebase/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function useDispatcherState() {
   const router = useRouter();
+  
+  // Single Dispatcher Email (Demo Scale)
+  const DISPATCHER_EMAIL = 'dispatcher@fixmate.com';
   
   // Dashboard Status State
   const [dispatcherStatus, setDispatcherStatus] = useState('Online');
@@ -76,7 +79,8 @@ export default function useDispatcherState() {
       techSpecialty: 'Plumbing',
       distance: '1.2 km away',
       price: '1499.00',
-      customerName: 'Priya Sharma'
+      customerName: 'Priya Sharma',
+      targetDispatcher: DISPATCHER_EMAIL
     },
     { 
       id: 'DISP-4821', 
@@ -93,7 +97,8 @@ export default function useDispatcherState() {
       techSpecialty: 'Electrical',
       distance: '2.4 km away',
       price: '1199.00',
-      customerName: 'Robert Kovich'
+      customerName: 'Robert Kovich',
+      targetDispatcher: DISPATCHER_EMAIL
     },
     { 
       id: 'DISP-4822', 
@@ -110,11 +115,12 @@ export default function useDispatcherState() {
       techSpecialty: 'HVAC',
       distance: '3.1 km away',
       price: '1299.00',
-      customerName: 'Aarav Mehta'
+      customerName: 'Aarav Mehta',
+      targetDispatcher: DISPATCHER_EMAIL
     }
   ]);
 
-  // Dynamic fetching of Urgent Broadcasts from API & LocalStorage
+  // Dynamic fetching of Urgent Broadcasts from API, Firestore & LocalStorage
   const fetchDispatches = async () => {
     try {
       const res = await fetch('http://localhost:5000/api/dispatches');
@@ -124,7 +130,7 @@ export default function useDispatcherState() {
         const combined = [...localData, ...data.data];
         const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
         setDispatches(unique);
-        const emergencies = unique.filter(d => d.priority?.includes('10') || d.type === 'URGENT').length;
+        const emergencies = unique.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
         setPendingEmergenciesCount(emergencies);
         return;
       }
@@ -137,6 +143,33 @@ export default function useDispatcherState() {
   };
 
   useEffect(() => {
+    let unsubFirestore = null;
+    try {
+      const dispatchesRef = collection(db, 'dispatches');
+      unsubFirestore = onSnapshot(dispatchesRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const firestoreItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          setDispatches(prev => {
+            const combined = [...firestoreItems, ...prev];
+            const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+            return unique;
+          });
+          const emergencies = firestoreItems.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
+          setPendingEmergenciesCount(prev => Math.max(prev, emergencies));
+
+          // Toast alert for newly arrived cancellation / delay alert
+          const latestAlert = firestoreItems[0];
+          if (latestAlert && latestAlert.reasonType) {
+            showToast(`🚨 REAL-TIME ALERT (${latestAlert.reasonType}): Technician reported issue on #${latestAlert.jobId || latestAlert.id}!`);
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore subscription warning:', err);
+      });
+    } catch(err) {
+      console.warn('Firestore error:', err);
+    }
+
     fetchDispatches();
     const interval = setInterval(fetchDispatches, 2500);
     const handleSync = () => fetchDispatches();
@@ -145,6 +178,7 @@ export default function useDispatcherState() {
     window.addEventListener('fixmate_dispatch_updated', handleSync);
 
     return () => {
+      if (unsubFirestore) unsubFirestore();
       clearInterval(interval);
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('fixmate_dispatch_updated', handleSync);

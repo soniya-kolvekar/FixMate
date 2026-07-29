@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../../lib/firebase/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import TechHeader from '../../components/technician/TechHeader';
 import TechDashboard from '../../components/technician/TechDashboard';
@@ -263,8 +263,65 @@ export default function TechnicianModulePage() {
   };
 
   // Delay & Cancellation Report Handler (Issue #12)
-  const handleReportDelay = (jobId, reasonType, notes) => {
-    showToast(`🚨 Urgent alert sent to Dispatcher for #${jobId}: "${reasonType}"`);
+  const handleReportDelay = async (jobId, reasonType, notes) => {
+    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
+    const isCancellation = reasonType === 'Cancel Assignment';
+    
+    const alertId = `DISP-ALERT-${Date.now()}`;
+    const alertItem = {
+      id: alertId,
+      jobId: jobId,
+      title: `${isCancellation ? '🚨 MID-SERVICE CANCELLATION REQUEST' : '⚠️ TECHNICIAN DELAY ALERT'} - #${jobId}`,
+      time: 'Just now',
+      address: targetJob?.location || 'Indiranagar 10th Main, Bengaluru',
+      priority: isCancellation ? 'Priority Level 10' : 'Priority Level 8',
+      category: isCancellation ? 'CANCELLATION' : 'DELAY',
+      type: 'URGENT',
+      icon: isCancellation ? '🚫' : '🚗',
+      colorClass: isCancellation ? 'bg-rose-50 border-rose-200 hover:border-rose-400' : 'bg-amber-50 border-amber-200 hover:border-amber-400',
+      iconBg: isCancellation ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-amber-100 text-amber-700 font-bold',
+      customerName: targetJob?.customerName || 'Customer',
+      customerPhone: targetJob?.customerPhone || '',
+      technicianName: currentUser?.name || 'Rajesh Kumar',
+      technicianPhone: currentUser?.phone || '+91 98765 43210',
+      targetDispatcher: 'dispatcher@fixmate.com',
+      reasonType: reasonType,
+      notes: notes || 'Technician reported incident during active duty.',
+      price: targetJob?.price ? `${targetJob.price.toFixed(2)}` : '499.00',
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Save to Firebase Firestore (dispatches & dispatcher_alerts collections)
+    try {
+      await setDoc(doc(db, 'dispatches', alertId), alertItem, { merge: true });
+      await setDoc(doc(db, 'dispatcher_alerts', alertId), alertItem, { merge: true });
+    } catch (err) {
+      console.warn('Firestore write warning:', err);
+    }
+
+    // 2. Post to Express Backend API
+    fetch('http://localhost:5000/api/dispatches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(alertItem)
+    }).catch(err => console.warn('Express API dispatch warning:', err));
+
+    // 3. Sync to LocalStorage & trigger local window event
+    try {
+      const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([alertItem, ...localData]));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+    } catch(e) {}
+
+    // 4. Update local job status if cancellation requested
+    if (isCancellation) {
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'Cancelled' } : j));
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob(prev => ({ ...prev, status: 'Cancelled' }));
+      }
+    }
+
+    showToast(`🚨 Urgent alert dynamically sent to dispatcher@fixmate.com for #${jobId}: "${reasonType}"`);
   };
 
   // Auth Handler (Issues #1, #2)
