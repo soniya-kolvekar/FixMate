@@ -1,4 +1,4 @@
-import TechnicianProfileForm from '@/components/technician/TechnicianProfileForm';
+import TechnicianProfileForm from '../../../components/technician/TechnicianProfileForm';
 
 export default function TechnicianProfilePage() {
   return (

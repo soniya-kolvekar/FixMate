@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { auth, db } from '@/lib/firebase/firebase';
+import { auth, db } from '../../lib/firebase/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import {
   User,
@@ -9,6 +9,7 @@ import {
   Phone,
   Briefcase,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const skillOptions = [
   'Electrical',
@@ -27,6 +28,7 @@ const skillOptions = [
 
 export default function TechnicianProfileForm() {
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -49,12 +51,18 @@ export default function TechnicianProfileForm() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setFormData({
-            ...formData,
-            ...docSnap.data(),
-            skills: docSnap.data().skills || [],
-          });
-        }
+  const data = docSnap.data();
+
+    setFormData({
+      name: data.name || '',
+      age: data.age || '',
+      gender: data.gender || '',
+      email: data.email || '',
+      mobile: data.mobile || '',
+      experience: data.experience || '',
+      skills: data.skills || [],
+    });
+  }
       } catch (err) {
         console.log(err);
       } finally {
@@ -88,34 +96,86 @@ export default function TechnicianProfileForm() {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      const user = auth.currentUser;
+  
+    const handleSave = async () => {
+  const {
+    name,
+    age,
+    gender,
+    mobile,
+    experience,
+    skills,
+  } = formData;
 
-      if (!user) return;
-
-      await updateDoc(doc(db, 'users', user.uid), {
-        name: formData.name,
-        age: formData.age,
-        gender: formData.gender,
-        mobile: formData.mobile,
-        experience: formData.experience,
-        skills: formData.skills,
-      });
-
-      alert('Profile Updated Successfully!');
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen text-xl font-semibold">
-        Loading...
-      </div>
-    );
+  if (!name.trim()) {
+    alert('Please enter your full name.');
+    return;
   }
+
+  if (!age) {
+    alert('Please enter your age.');
+    return;
+  }
+
+  if (Number(age) < 18 || Number(age) > 100) {
+    alert('Please enter a valid age between 18 and 100.');
+    return;
+  }
+
+  if (!gender) {
+    alert('Please select your gender.');
+    return;
+  }
+
+  if (!mobile.trim()) {
+    alert('Please enter your mobile number.');
+    return;
+  }
+
+  if (!/^\d{10}$/.test(mobile)) {
+    alert('Please enter a valid 10-digit mobile number.');
+    return;
+  }
+
+  if (!experience) {
+    alert('Please enter your years of experience.');
+    return;
+  }
+
+  if (Number(experience) < 0 || Number(experience) > 60) {
+    alert('Please enter a valid experience.');
+    return;
+  }
+
+  if (skills.length === 0) {
+    alert('Please select at least one skill.');
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      router.push('/');
+      return;
+    }
+
+    await updateDoc(doc(db, 'users', user.uid), {
+      name: name.trim(),
+      age: Number(age),
+      gender,
+      mobile,
+      experience: Number(experience),
+      skills,
+    });
+
+    alert('Profile updated successfully!');
+
+    router.push('/technician');
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
