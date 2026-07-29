@@ -10,7 +10,6 @@ import TechExtraChargesModal from '../../components/technician/TechExtraChargesM
 import TechDelayModal from '../../components/technician/TechDelayModal';
 import TechAuthModal from '../../components/technician/TechAuthModal';
 import { Info } from 'lucide-react';
-import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function TechnicianModulePage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | jobs | emergency | performance | profile
@@ -373,6 +372,5 @@ export default function TechnicianModulePage() {
       )}
 
     </div>
-    </ProtectedRoute>
   );
 }
