@@ -10,7 +10,7 @@ import TechEmergencyModal from '../../components/technician/TechEmergencyModal';
 import TechExtraChargesModal from '../../components/technician/TechExtraChargesModal';
 import TechDelayModal from '../../components/technician/TechDelayModal';
 import TechAuthModal from '../../components/technician/TechAuthModal';
-import { Info, Sparkles } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 export default function TechnicianModulePage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | jobs | emergency | performance | profile
@@ -22,12 +22,12 @@ export default function TechnicianModulePage() {
   // Authentication & Technician Profile State (Issues #1, #2, #14)
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
   const [currentUser, setCurrentUser] = useState({
-    name: 'Alex Vance',
-    email: 'alex.vance@fixmate.io',
-    phone: '555-0199',
+    name: 'Rajesh Kumar',
+    email: 'rajesh.kumar@fixmate.in',
+    phone: '+91 98765 43210',
     specialization: 'Master Plumber',
     experienceYears: '8',
-    workingArea: 'Downtown Sector',
+    workingArea: 'Indiranagar & HSR, Bengaluru',
     avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
     status: 'Available'
   });
@@ -47,11 +47,11 @@ export default function TechnicianModulePage() {
       title: 'Plumbing Repair & Leak Fixing',
       tag: 'PREMIUM',
       time: '09:30 AM',
-      location: '742 Evergreen Terr, DUMBO, NY',
-      customerName: 'Sarah Jenkins',
+      location: '104 Indiranagar 10th Main, Bengaluru',
+      customerName: 'Priya Sharma',
       customerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '555-0144',
-      price: 120.00,
+      customerPhone: '+91 98123 45678',
+      price: 499.00,
       status: 'On The Way',
       description: 'Persistent leak detected under vanity cabinet. Customer reports water pooling after 10 minutes of faucet use.',
       extraCharges: 0,
@@ -60,30 +60,30 @@ export default function TechnicianModulePage() {
     },
     {
       id: 'FM-9842',
-      title: 'Water Heater Check & Flush',
+      title: 'Geyser & Water Heater Flush',
       tag: 'REPAIR',
       time: '11:00 AM',
-      location: '104 Maple Ave, Williamsburg, NY',
-      customerName: 'David Kim',
+      location: '742 Bandra West, Mumbai',
+      customerName: 'Aarav Mehta',
       customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '555-0188',
-      price: 95.00,
+      customerPhone: '+91 98234 56789',
+      price: 699.00,
       status: 'Accepted',
-      description: 'Sediment flush and pressure valve inspection for 50-gallon water heater.',
+      description: 'Sediment flush and pressure safety valve inspection for 25L geyser.',
       extraCharges: 0,
       extraChargesReason: '',
       isEmergency: false
     },
     {
       id: 'FM-9843',
-      title: 'Kitchen Faucet Replacement',
+      title: 'Kitchen Tap Sensor Replacement',
       tag: 'INSTALL',
       time: '02:00 PM',
-      location: '88 Skyway Ave, Lower East Side, NY',
-      customerName: 'Rachel Green',
+      location: '88 Connaught Place, New Delhi',
+      customerName: 'Ananya Reddy',
       customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '555-0111',
-      price: 140.00,
+      customerPhone: '+91 98345 67890',
+      price: 899.00,
       status: 'Assigned',
       description: 'Replace standard kitchen tap with touchless sensor faucet provided by customer.',
       extraCharges: 0,
@@ -92,14 +92,14 @@ export default function TechnicianModulePage() {
     },
     {
       id: 'FM-9844',
-      title: 'Bathroom Pipe Sanitation',
+      title: 'Bathroom Pipe Anti-Clog Sanitation',
       tag: 'MAINTENANCE',
       time: '04:30 PM',
-      location: '482 Oakwood Ave, Suite 402, SF, CA',
-      customerName: 'Eleanor Fitzwilliam',
+      location: '482 HSR Layout Sector 3, Bengaluru',
+      customerName: 'Vikram Malhotra',
       customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '555-0192',
-      price: 110.00,
+      customerPhone: '+91 98456 78901',
+      price: 1299.00,
       status: 'Assigned',
       description: 'Deep sanitization and anti-clog treatment for master suite bathroom drainage.',
       extraCharges: 0,
@@ -110,23 +110,23 @@ export default function TechnicianModulePage() {
 
   // Notifications state (Issue #13)
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Job Assigned', message: 'You have been assigned #FM-9844 in SF', time: '10 mins ago' },
-    { id: 2, title: 'Dispatcher Broadcast', message: 'High demand in Downtown Sector', time: '45 mins ago' }
+    { id: 1, title: 'New Job Assigned', message: 'You have been assigned #FM-9844 in HSR Layout', time: '10 mins ago' },
+    { id: 2, title: 'Dispatcher Broadcast', message: 'High service demand in Indiranagar Sector', time: '45 mins ago' }
   ]);
 
   // Mock Emergency Job data (Issues #5, #6)
   const mockEmergencyJob = {
     id: 'EMG-9021',
-    title: 'Burst Main Pipe & Ceiling Flooding',
+    title: 'Burst Main Pipe & Floor Flooding',
     category: 'Emergency Plumbing',
-    distance: '1.2 miles away',
+    distance: '1.2 km away',
     travelTime: '8 mins',
-    customerNote: 'Water leaking heavily through living room ceiling. Need immediate shutoff and repair.',
-    location: '147 Maple Avenue, San Francisco, CA',
-    customerName: 'Homer Simpson',
+    customerNote: 'Water leaking heavily through living room ceiling. Need immediate main valve shutoff and repair.',
+    location: '147 Jubilee Hills Road No. 36, Hyderabad',
+    customerName: 'Rohan Verma',
     customerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    customerPhone: '555-0100',
-    price: 220.00,
+    customerPhone: '+91 98567 89012',
+    price: 1499.00,
     status: 'Accepted',
     tag: 'EMERGENCY',
     time: 'IMMEDIATE',
@@ -174,7 +174,6 @@ export default function TechnicianModulePage() {
 
   // Emergency Acceptance Handler (Issues #5, #6)
   const handleAcceptEmergency = (emgJob) => {
-    // Check capacity limit
     const activeCount = jobs.filter(j => j.status !== 'Completed').length;
     if (activeCount >= MAX_DAILY_CAPACITY) {
       showToast(`⚠️ Daily capacity limit of ${MAX_DAILY_CAPACITY} jobs reached! Cannot accept more jobs today.`);
@@ -218,7 +217,7 @@ export default function TechnicianModulePage() {
       }));
     }
 
-    showToast(`+$${amount.toFixed(2)} extra charges added to #${jobId} with justification.`);
+    showToast(`+₹${amount.toFixed(2)} extra charges added to #${jobId} with justification.`);
   };
 
   // Delay & Cancellation Report Handler (Issue #12)

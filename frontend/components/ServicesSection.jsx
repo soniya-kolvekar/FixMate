@@ -1,86 +1,80 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Wrench, Zap, Snowflake, Hammer, Paintbrush, Sparkles, Cog, ShieldCheck } from 'lucide-react';
-
-const serviceIcons = {
-  plumbing: Wrench,
-  electrical: Zap,
-  ac_service: Snowflake,
-  carpentry: Hammer,
-  painting: Paintbrush,
-  cleaning: Sparkles,
-  appliances: Cog,
-  pest_control: ShieldCheck
-};
-
-const defaultServices = [
-  { id: 'plumbing', name: 'Plumbing', price: 499, icon: 'plumbing' },
-  { id: 'electrical', name: 'Electrical', price: 599, icon: 'electrical' },
-  { id: 'ac_service', name: 'AC Service', price: 699, icon: 'ac_service' },
-  { id: 'carpentry', name: 'Carpentry', price: 799, icon: 'carpentry' },
-  { id: 'painting', name: 'Painting', price: 1499, icon: 'painting' },
-  { id: 'cleaning', name: 'Cleaning', price: 899, icon: 'cleaning' },
-  { id: 'appliances', name: 'Appliances', price: 599, icon: 'appliances' },
-  { id: 'pest_control', name: 'Pest Control', price: 999, icon: 'pest_control' }
-];
+import { useState } from 'react';
+import { Wrench, Zap, Snowflake, Hammer, Paintbrush, Sparkles, Settings, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export default function ServicesSection({ onSelectService }) {
-  const [services, setServices] = useState(defaultServices);
-
-  useEffect(() => {
-    fetch('http://localhost:5000/api/services')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          const adapted = data.data.map(s => ({
-            ...s,
-            price: s.price < 200 ? s.price * 10 : s.price
-          }));
-          setServices(adapted);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const [services] = useState([
+    { id: 'plumbing', name: 'Plumbing Repair', price: 399, icon: Wrench, desc: 'Pipe repair, leak fixing, tap & vanity installation', tag: 'Popular' },
+    { id: 'electrical', name: 'Electrical Works', price: 499, icon: Zap, desc: 'Wiring, circuit breaker, lighting & switch repairs', tag: 'Verified' },
+    { id: 'ac_service', name: 'AC Servicing & Repair', price: 699, icon: Snowflake, desc: 'Air conditioning cleaning, gas check & duct repair', tag: 'Seasonal' },
+    { id: 'carpentry', name: 'Carpentry & Furniture', price: 599, icon: Hammer, desc: 'Furniture assembly, door lock & custom woodwork', tag: 'Expert' },
+    { id: 'painting', name: 'Home Painting', price: 1499, icon: Paintbrush, desc: 'Interior & exterior wall painting & waterproofing', tag: 'Full Service' },
+    { id: 'cleaning', name: 'Deep Sanitation', price: 899, icon: Sparkles, desc: 'Deep home sanitation, kitchen & carpet cleaning', tag: 'Hygiene' },
+    { id: 'appliances', name: 'Appliance Repair', price: 499, icon: Settings, desc: 'Refrigerator, oven, microwave & washer maintenance', tag: 'Fast Fix' },
+    { id: 'pest_control', name: 'Pest Inspection', price: 999, icon: ShieldAlert, desc: 'Eco-friendly pest inspection & removal service', tag: 'Safe' }
+  ]);
 
   return (
-    <section id="services" className="py-20 bg-slate-50 border-y border-slate-200/60">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="services" className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-6 space-y-12">
         
-        {/* Categories Grid */}
-        <div className="bg-white rounded-3xl p-8 sm:p-11 border border-slate-200/80 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-9 gap-4">
-            <div>
-              <h2 className="text-3xl font-extrabold text-[#0A2540] tracking-tight mb-1.5">
-                What do you need help with?
-              </h2>
-              <p className="text-sm text-slate-600">
-                Browse our most popular home service categories
-              </p>
-            </div>
-          </div>
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-regalNavy bg-[#EEF4ED] px-4 py-1.5 rounded-full border border-powderBlue/40">
+            Transparent Upfront Pricing
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black font-heading text-prussianBlue tracking-tight">
+            Our Core Home Services
+          </h2>
+          <p className="text-sm font-normal text-slate-600 leading-relaxed">
+            Select a service category to view verified technicians, fixed pricing in Indian Rupees, and schedule a convenient home appointment.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-            {services.map((item) => {
-              const IconComponent = serviceIcons[item.id] || Wrench;
-              return (
-                <div 
-                  key={item.id}
-                  onClick={() => onSelectService && onSelectService(item)}
-                  className="bg-slate-50 border border-slate-200/60 hover:bg-white hover:border-blue-600 rounded-xl p-6 text-center transition-all cursor-pointer flex flex-col items-center hover:-translate-y-1 hover:shadow-lg group"
-                >
-                  <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 group-hover:bg-[#0A2540] group-hover:text-white flex items-center justify-center mb-3.5 transition-colors">
-                    <IconComponent className="w-5 h-5" />
+        {/* Services Grid (16px radius cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {services.map((srv) => {
+            const IconComp = srv.icon;
+            return (
+              <div 
+                key={srv.id}
+                onClick={() => onSelectService(srv)}
+                className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-card hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-5 group"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-mintCream text-regalNavy flex items-center justify-center group-hover:bg-regalNavy group-hover:text-white transition-colors">
+                      <IconComp className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold text-regalNavy bg-mintCream px-2.5 py-1 rounded-full border border-powderBlue/30">
+                      {srv.tag}
+                    </span>
                   </div>
-                  <div className="font-bold text-[#0A2540] text-base mb-1">
-                    {item.name}
-                  </div>
-                  <div className="text-xs font-semibold text-slate-500">
-                    From ₹{item.price}
+
+                  <div>
+                    <h3 className="text-lg font-bold font-heading text-prussianBlue group-hover:text-regalNavy transition-colors">
+                      {srv.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-normal leading-relaxed mt-1">
+                      {srv.desc}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-semibold block">Starts from</span>
+                    <span className="text-lg font-black font-heading text-prussianBlue">₹{srv.price}</span>
+                  </div>
+
+                  <span className="text-xs font-semibold text-regalNavy group-hover:text-oxfordNavy flex items-center gap-1">
+                    <span>Book Now</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
       </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { DollarSign, PlusCircle, X, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, X, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 
 export default function TechExtraChargesModal({ 
   isOpen, 
@@ -26,7 +26,7 @@ export default function TechExtraChargesModal({
     setError('');
 
     if (totalExtra <= 0) {
-      setError('Please enter a valid additional charge amount greater than $0.');
+      setError('Please enter a valid additional charge amount greater than ₹0.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function TechExtraChargesModal({
         {/* Modal Header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-            <DollarSign className="w-5 h-5" />
+            <PlusCircle className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-lg font-extrabold text-[#0A2540]">Add Additional Charges</h3>
@@ -80,17 +80,17 @@ export default function TechExtraChargesModal({
           {/* Base Price Display (Uneditable) */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 flex justify-between items-center">
             <span className="font-bold text-slate-500">Fixed Service Base Price (Locked)</span>
-            <span className="font-extrabold text-[#0A2540] text-sm">${fixedPrice.toFixed(2)}</span>
+            <span className="font-extrabold text-[#0A2540] text-sm">₹{fixedPrice.toFixed(2)}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="font-bold text-slate-700 block mb-1">Additional Labour ($)</label>
+              <label className="font-bold text-slate-700 block mb-1">Additional Labour (₹)</label>
               <input 
                 type="number"
                 min="0"
-                step="0.01"
-                placeholder="0.00"
+                step="1"
+                placeholder="0"
                 value={laborCharge}
                 onChange={(e) => setLaborCharge(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
@@ -98,12 +98,12 @@ export default function TechExtraChargesModal({
             </div>
 
             <div>
-              <label className="font-bold text-slate-700 block mb-1">Additional Materials ($)</label>
+              <label className="font-bold text-slate-700 block mb-1">Additional Materials (₹)</label>
               <input 
                 type="number"
                 min="0"
-                step="0.01"
-                placeholder="0.00"
+                step="1"
+                placeholder="0"
                 value={materialCharge}
                 onChange={(e) => setMaterialCharge(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
@@ -126,7 +126,7 @@ export default function TechExtraChargesModal({
           {/* Dynamic Summary */}
           <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 flex justify-between items-center text-xs font-bold text-blue-900">
             <span>New Calculated Total Bill:</span>
-            <span className="text-sm font-black text-blue-700">${newTotalBill.toFixed(2)}</span>
+            <span className="text-sm font-black text-blue-700">₹{newTotalBill.toFixed(2)}</span>
           </div>
 
           <button

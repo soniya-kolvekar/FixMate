@@ -23,13 +23,13 @@ export default function TechDashboard({
 }) {
   const activeJobs = jobs.filter(j => j.status !== 'Completed');
   const emergencyJobs = jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY' || j.tag === 'URGENT');
-  const completedTodayCount = 2; // Mock count
+  const completedTodayCount = 2;
   const capacityPercentage = Math.min(100, Math.round((activeJobs.length / maxCapacity) * 100));
 
   return (
     <div className="space-y-7 antialiased">
       
-      {/* Top Row: 4 Metric Cards (Matching Admin & Dispatcher) */}
+      {/* Top Row: 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Metric 1: Assigned Jobs */}
@@ -46,7 +46,7 @@ export default function TechDashboard({
           </div>
         </div>
 
-        {/* Metric 2: Emergency Alerts (Pulsing Red Card) */}
+        {/* Metric 2: Emergency Alerts */}
         <div 
           onClick={onTriggerEmergency}
           className="bg-white rounded-2xl p-5 border-2 border-rose-500 bg-rose-50/30 shadow-sm space-y-2 cursor-pointer hover:shadow-md transition-all"
@@ -167,7 +167,7 @@ export default function TechDashboard({
 
                   <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
                     <span className="text-sm font-black text-[#0A2540]">
-                      ${(job.price + (job.extraCharges || 0)).toFixed(2)}
+                      ₹{(job.price + (job.extraCharges || 0)).toFixed(2)}
                     </span>
                     <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold ${
                       job.status === 'Completed' 
@@ -188,7 +188,7 @@ export default function TechDashboard({
         {/* Right Column (1 Col): Live Emergency & Action Box */}
         <div className="space-y-5">
           
-          {/* Emergency Card Box (Issues #5, #6) */}
+          {/* Emergency Card Box */}
           <div className="bg-white rounded-2xl p-6 border-2 border-rose-500 bg-rose-50/20 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-rose-200">
               <h3 className="text-base font-extrabold text-rose-600 flex items-center gap-2">
