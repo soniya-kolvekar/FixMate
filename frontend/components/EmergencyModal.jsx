@@ -11,6 +11,35 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const dispatchId = `DISP-${Math.floor(4800 + Math.random() * 200)}`;
+    const category = emergencyType.toUpperCase().includes('PIPE') ? 'PLUMBING' : emergencyType.toUpperCase().includes('POWER') ? 'ELECTRICAL' : 'HVAC';
+    const icon = emergencyType.toUpperCase().includes('PIPE') ? '💧' : emergencyType.toUpperCase().includes('POWER') ? '⚡' : '🔥';
+
+    const newDispatchItem = {
+      id: dispatchId,
+      title: emergencyType,
+      time: 'Just now',
+      address: address,
+      priority: 'Priority Level 10',
+      category: category,
+      type: 'URGENT',
+      icon: icon,
+      colorClass: 'bg-rose-50 border-rose-100 hover:border-rose-300',
+      iconBg: 'bg-rose-100 text-rose-600',
+      recommendedTech: 'Dave R.',
+      techSpecialty: 'Emergency Squad',
+      distance: '1.2 km away',
+      price: '1499.00',
+      customerName: phone || 'Emergency Call'
+    };
+
+    try {
+      const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([newDispatchItem, ...local]));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+    } catch(err) {}
+
     try {
       const res = await fetch('http://localhost:5000/api/emergency', {
         method: 'POST',
@@ -19,7 +48,7 @@ export default function EmergencyModal({ isOpen, onClose, onShowToast }) {
       });
       const data = await res.json();
       if (data.success) {
-        onShowToast(`EMERGENCY ALERT DISPATCHED! (${data.dispatch.id}) Tech ETA: ${data.dispatch.etaMinutes} mins.`);
+        onShowToast(`EMERGENCY ALERT DISPATCHED! (${data.dispatch.id}) Tech ETA: ${data.dispatch.etaMinutes || 20} mins.`);
       } else {
         onShowToast('EMERGENCY ALERT DISPATCHED! Tech ETA: 20 mins.');
       }
