@@ -24,6 +24,26 @@ const servicesCatalog = [
 
 const mockBookings = [];
 const mockEmergencies = [];
+const mockDispatches = [
+  { 
+    id: 'DISP-4820', 
+    title: 'Main Pipe Burst & Floor Flooding', 
+    time: '4 mins ago', 
+    address: '104 Indiranagar 10th Main, Bengaluru', 
+    priority: 'Priority Level 10', 
+    category: 'PLUMBING', 
+    type: 'RESIDENTIAL', 
+    icon: '💧', 
+    colorClass: 'bg-rose-50 border-rose-100 hover:border-rose-300', 
+    iconBg: 'bg-rose-100 text-rose-600',
+    recommendedTech: 'Rajesh Kumar',
+    techSpecialty: 'Plumbing',
+    distance: '1.2 km away',
+    price: '1499.00',
+    customerName: 'Priya Sharma',
+    targetDispatcher: 'dispatcher@fixmate.com'
+  }
+];
 
 const portalDashboards = {
   customer: {
@@ -48,6 +68,7 @@ const portalDashboards = {
     title: 'Dispatcher Routing Center',
     role: 'Dispatcher',
     metrics: { activeTechnicians: 18, pendingDispatches: 2, avgResponseMinutes: 16 },
+    dispatcherEmail: 'dispatcher@fixmate.com',
     routes: [
       { zone: 'Indiranagar & HSR, Bengaluru', techCount: 6, status: 'Optimal' },
       { zone: 'Bandra & Juhu, Mumbai', techCount: 8, status: 'High Demand' },
@@ -72,6 +93,44 @@ app.get('/api/health', (req, res) => {
 // Services Catalog
 app.get('/api/services', (req, res) => {
   res.json({ success: true, data: servicesCatalog });
+});
+
+// Dispatches API (Get dispatches / delay & cancellation broadcasts)
+app.get('/api/dispatches', (req, res) => {
+  res.json({ success: true, data: mockDispatches });
+});
+
+// Create new urgent dispatch / delay / mid-cancellation alert
+app.post('/api/dispatches', (req, res) => {
+  const item = req.body;
+  if (!item || !item.id) {
+    return res.status(400).json({ success: false, error: 'Invalid dispatch payload' });
+  }
+
+  // Assign target dispatcher if missing
+  if (!item.targetDispatcher) {
+    item.targetDispatcher = 'dispatcher@fixmate.com';
+  }
+
+  // Push to top of list
+  const existsIndex = mockDispatches.findIndex(d => d.id === item.id);
+  if (existsIndex !== -1) {
+    mockDispatches[existsIndex] = { ...mockDispatches[existsIndex], ...item };
+  } else {
+    mockDispatches.unshift(item);
+  }
+
+  res.json({ success: true, message: 'Urgent dispatch alert recorded', data: item });
+});
+
+// Delete / Resolve dispatch
+app.delete('/api/dispatches/:id', (req, res) => {
+  const id = req.params.id;
+  const index = mockDispatches.findIndex(d => d.id === id);
+  if (index !== -1) {
+    mockDispatches.splice(index, 1);
+  }
+  res.json({ success: true, message: 'Dispatch resolved / removed' });
 });
 
 // Create Booking
