@@ -481,6 +481,7 @@ export default function TechnicianModulePage() {
                 <TechPerformance 
                   jobs={jobs}
                   currentUser={currentUser}
+                  availability={availability}
                 />
               )}
 

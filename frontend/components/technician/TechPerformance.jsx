@@ -4,23 +4,26 @@ import { useState } from 'react';
 import { 
   Star, 
   TrendingUp, 
-  Clock, 
   CheckCircle2, 
   AlertTriangle, 
-  ShieldAlert, 
-  Award, 
-  DollarSign, 
-  ThumbsUp, 
   Zap, 
-  Calendar,
   Sparkles,
-  BarChart2
+  DollarSign
 } from 'lucide-react';
 
-export default function TechPerformance({ jobs = [], currentUser }) {
-  const completedJobsCount = jobs.filter(j => j.status === 'Completed').length + 142;
-  const emergencyJobsCount = jobs.filter(j => j.isEmergency).length + 18;
-  const totalEarnings = (completedJobsCount * 499) + 12500;
+export default function TechPerformance({ 
+  jobs = [], 
+  currentUser,
+  availability = 'Available'
+}) {
+  // 1. Pure Dynamic Metric Calculations (No hardcoded offset additions)
+  const jobsCompletedToday = jobs.filter(j => j.status === 'Completed').length;
+  const totalJobsCompleted = jobsCompletedToday; // Purely dynamic count of completed jobs
+  const emergencyJobsAccepted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY') && j.status !== 'Cancelled').length;
+  const cancellationCount = jobs.filter(j => j.status === 'Cancelled' || j.status === 'CANCELLED').length;
+  
+  // Dynamic Monthly Payout Calculation based on real jobs
+  const totalEarnings = (totalJobsCompleted * 499) + (emergencyJobsAccepted * 200);
 
   const [reviews] = useState([
     {
@@ -28,7 +31,7 @@ export default function TechPerformance({ jobs = [], currentUser }) {
       customer: 'Priya Sharma',
       rating: 5,
       date: '2 hours ago',
-      comment: 'Rajesh arrived within 15 minutes for the pipe leak emergency. Extremely professional and clean work!',
+      comment: 'Rajesh arrived within 15 minutes for the pipe leak emergency in Kodialbail. Extremely professional and clean work!',
       service: 'Emergency Plumbing Repair'
     },
     {
@@ -36,7 +39,7 @@ export default function TechPerformance({ jobs = [], currentUser }) {
       customer: 'Aarav Mehta',
       rating: 5,
       date: 'Yesterday',
-      comment: 'Fixed our geyser pressure issue quickly. Great transparency on pricing and extra charges.',
+      comment: 'Fixed our geyser pressure issue in Hampankatta quickly. Great transparency on pricing.',
       service: 'Geyser Maintenance'
     },
     {
@@ -44,7 +47,7 @@ export default function TechPerformance({ jobs = [], currentUser }) {
       customer: 'Robert Kovich',
       rating: 4.8,
       date: '3 days ago',
-      comment: 'Punctual, efficient and polite. Solved main pipeline block smoothly.',
+      comment: 'Punctual, efficient and polite. Solved main pipeline block smoothly in Kadri Hills.',
       service: 'Pipeline Unblocking'
     }
   ]);
@@ -55,16 +58,29 @@ export default function TechPerformance({ jobs = [], currentUser }) {
       {/* Top Banner Header */}
       <div className="bg-gradient-to-r from-[#0A2540] via-[#13395F] to-[#1D4ED8] rounded-3xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2 z-10">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Top Rated Specialist 2026
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Mangaluru Performance Hub
+            </span>
+
+            {/* Current Duty Availability Badge */}
+            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+              availability === 'Available' 
+                ? 'bg-emerald-500 text-white shadow-sm' 
+                : availability === 'Busy'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'bg-slate-700 text-slate-200 border border-slate-600'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              Status: {availability}
             </span>
           </div>
+
           <h2 className="text-2xl sm:text-3xl font-black font-heading">
-            {currentUser?.name || 'Rajesh Kumar'}'s Performance Analytics
+            {currentUser?.name || 'Rajesh Kumar'}'s Performance Summary
           </h2>
           <p className="text-xs text-blue-200 font-medium max-w-xl">
-            Real-time rating, service metrics, customer satisfaction index, and task completion speed.
+            Live dynamic statistics automatically updated after every completed job and dispatch status update.
           </p>
         </div>
 
@@ -73,67 +89,81 @@ export default function TechPerformance({ jobs = [], currentUser }) {
           <div className="text-3xl font-black text-amber-400 flex items-center justify-center gap-1.5">
             <Star className="w-7 h-7 fill-amber-400 text-amber-400" /> 4.92
           </div>
-          <p className="text-[11px] font-semibold text-slate-200">Based on 148 verified reviews</p>
+          <p className="text-[11px] font-semibold text-slate-200">Based on verified reviews in Mangaluru</p>
         </div>
       </div>
 
-      {/* Main Performance Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+      {/* 5 Dynamic Core Metrics Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">Jobs Completed</span>
-          <h3 className="text-2xl font-black text-[#0A2540]">{completedJobsCount}</h3>
-          <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> +14% this month
+        {/* Metric 1: Jobs Completed Today */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Completed Today</span>
+          <h3 className="text-2xl font-black text-[#0A2540]">{jobsCompletedToday}</h3>
+          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 py-0.5 px-2 rounded-full">
+            ● Live Updated
           </span>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
-            <Zap className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">Emergency Runs</span>
-          <h3 className="text-2xl font-black text-[#0A2540]">{emergencyJobsCount}</h3>
-          <span className="text-[11px] font-bold text-rose-600">100% Acceptance Rate</span>
+        {/* Metric 2: Total Jobs Completed */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Completed</span>
+          <h3 className="text-2xl font-black text-emerald-600">{totalJobsCompleted}</h3>
+          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 py-0.5 px-2 rounded-full">
+            Dynamic Total
+          </span>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-            <Clock className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">Avg Resolution Time</span>
-          <h3 className="text-2xl font-black text-[#0A2540]">38 Mins</h3>
-          <span className="text-[11px] font-bold text-blue-600">8 Mins faster than SLA</span>
+        {/* Metric 3: Emergency Jobs Accepted */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Emergency Accepted</span>
+          <h3 className="text-2xl font-black text-rose-600">{emergencyJobsAccepted}</h3>
+          <span className="text-[10px] font-bold text-rose-600 bg-rose-50 py-0.5 px-2 rounded-full">
+            Accepted Calls
+          </span>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-            <Award className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">Cancellation Rate</span>
-          <h3 className="text-2xl font-black text-[#0A2540]">0.4%</h3>
-          <span className="text-[11px] font-bold text-emerald-600">Exemplary Reliability</span>
+        {/* Metric 4: Cancellation Count */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Cancellations</span>
+          <h3 className={`text-2xl font-black ${cancellationCount > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+            {cancellationCount}
+          </h3>
+          <span className={`text-[10px] font-bold py-0.5 px-2 rounded-full ${
+            cancellationCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-600'
+          }`}>
+            {cancellationCount > 0 ? 'Mid Cancelled' : '0 Mid Cancel'}
+          </span>
+        </div>
+
+        {/* Metric 5: Current Availability */}
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Current Availability</span>
+          <h3 className={`text-xl font-black truncate ${
+            availability === 'Available' ? 'text-emerald-600' : availability === 'Busy' ? 'text-amber-600' : 'text-slate-500'
+          }`}>
+            {availability}
+          </h3>
+          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 py-0.5 px-2 rounded-full">
+            Synced Live
+          </span>
         </div>
 
       </div>
 
-      {/* Two Column Grid: Rating Breakdown & Badges */}
+      {/* Two Column Grid: Rating Reviews & Payout Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Rating Breakdown & Customer Reviews (Col Span 2) */}
+        {/* Customer Reviews (Col Span 2) */}
         <div className="lg:col-span-2 space-y-6">
-          
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-base font-extrabold text-[#0A2540]">Customer Ratings & Reviews</h3>
-                <p className="text-xs text-slate-400 font-medium">Recent client feedback and satisfaction ratings</p>
+                <h3 className="text-base font-extrabold text-[#0A2540]">Customer Feedback & Ratings</h3>
+                <p className="text-xs text-slate-400 font-medium">Recent verified client feedback across Mangaluru sector</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
-                100% Verified Customer Reviews
+                100% Verified Feedback
               </span>
             </div>
 
@@ -156,13 +186,10 @@ export default function TechPerformance({ jobs = [], currentUser }) {
               ))}
             </div>
           </div>
-
         </div>
 
-        {/* Right Sidebar: Achievement Badges & Earnings Summary */}
+        {/* Right Sidebar: Monthly Payout Summary */}
         <div className="space-y-6">
-          
-          {/* Earnings Card */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Monthly Payout Summary</h4>
@@ -176,16 +203,15 @@ export default function TechPerformance({ jobs = [], currentUser }) {
 
             <div className="space-y-2 text-xs font-semibold text-slate-500 pt-3 border-t border-slate-100">
               <div className="flex justify-between">
-                <span>Base Service Revenue</span>
-                <span>₹{(totalEarnings * 0.85).toFixed(2)}</span>
+                <span>Completed Job Rates ({totalJobsCompleted})</span>
+                <span>₹{(totalJobsCompleted * 499).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Emergency Bonus Pay</span>
-                <span className="text-emerald-600 font-bold">+₹{(totalEarnings * 0.15).toFixed(2)}</span>
+                <span>Emergency Bonus Pay ({emergencyJobsAccepted})</span>
+                <span className="text-emerald-600 font-bold">+₹{(emergencyJobsAccepted * 200).toFixed(2)}</span>
               </div>
             </div>
           </div>
-
         </div>
 
       </div>

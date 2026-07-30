@@ -23,7 +23,7 @@ export default function TechDashboard({
 }) {
   const activeJobs = jobs.filter(j => j.status !== 'Completed');
   const emergencyJobs = jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY' || j.tag === 'URGENT');
-  const completedTodayCount = 2;
+  const completedTodayCount = jobs.filter(j => j.status === 'Completed').length;
   const capacityPercentage = Math.min(100, Math.round((activeJobs.length / maxCapacity) * 100));
 
   return (
