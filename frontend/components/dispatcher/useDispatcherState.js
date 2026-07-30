@@ -187,12 +187,12 @@ export default function useDispatcherState() {
 
   // Technicians List
   const [technicians, setTechnicians] = useState([
-    { name: 'Rajesh Kumar', assigned: 2, travel: 1, status: 'Available', specialty: 'Plumbing', zone: 'Indiranagar & HSR, Bengaluru' },
-    { name: 'Dave R.', assigned: 4, travel: 2, status: 'Available', specialty: 'Plumbing', zone: 'North Metro' },
-    { name: 'Sarah J.', assigned: 3, travel: 4, status: 'Available', specialty: 'Electrical', zone: 'Downtown Sector' },
-    { name: 'Mike T.', assigned: 5, travel: 1, status: 'Busy', specialty: 'HVAC', zone: 'Downtown Sector' },
-    { name: 'Elena K.', assigned: 2, travel: 3, status: 'Available', specialty: 'Carpentry', zone: 'South Suburbs' },
-    { name: 'James L.', assigned: 1, travel: 1, status: 'Offline', specialty: 'Appliance Repair', zone: 'West District' }
+    { name: 'Rajesh Kumar', assigned: 2, travel: 1, status: 'Available', specialty: 'Plumbing', zone: 'Kodialbail & Hampankatta, Mangaluru' },
+    { name: 'Dave R.', assigned: 4, travel: 2, status: 'Available', specialty: 'Plumbing', zone: 'Kadri & Bejai, Mangaluru' },
+    { name: 'Sarah J.', assigned: 3, travel: 4, status: 'Available', specialty: 'Electrical', zone: 'Hampankatta Zone, Mangaluru' },
+    { name: 'Mike T.', assigned: 5, travel: 1, status: 'Busy', specialty: 'HVAC', zone: 'Hampankatta Zone, Mangaluru' },
+    { name: 'Elena K.', assigned: 2, travel: 3, status: 'Available', specialty: 'Carpentry', zone: 'Surathkal & Mukka, Mangaluru' },
+    { name: 'James L.', assigned: 1, travel: 1, status: 'Offline', specialty: 'Appliance Repair', zone: 'Ullal & Thokottu, Mangaluru' }
   ]);
 
   // Live Firestore subscription for Technicians Roster & Real-Time Availability Status
@@ -213,7 +213,7 @@ export default function useDispatcherState() {
               travel: 1,
               status: formattedStatus,
               specialty: data.specialization || (Array.isArray(data.skills) ? data.skills.join(', ') : data.specialty) || 'Plumbing',
-              zone: data.workingArea || data.serviceArea || data.zone || 'Indiranagar & HSR, Bengaluru'
+              zone: data.workingArea || data.serviceArea || data.zone || 'Kodialbail & Hampankatta, Mangaluru'
             };
           });
 

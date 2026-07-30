@@ -65,7 +65,7 @@ export default function TechHeader({
       onClick: () => setActiveTab && setActiveTab('profile') 
     },
     { 
-      label: 'Main Home Platform', 
+      label: 'Home', 
       ariaLabel: 'Return to home landing page', 
       link: '/' 
     }
@@ -73,7 +73,7 @@ export default function TechHeader({
 
   const socialItems = [
     { label: 'Emergency Alert', onClick: onTriggerEmergency },
-    { label: 'Main Website', link: '/' }
+    { label: 'Home', link: '/' }
   ];
 
   return (

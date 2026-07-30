@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, Suspense,useEffect } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Calendar,
@@ -95,7 +95,7 @@ useEffect(() => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     const user = auth.currentUser;
@@ -174,12 +174,14 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
     }
   };
     return (
+      <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
+
     <main className="min-h-screen bg-slate-50 py-10">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
 
-        <h1 className="text-3xl font-bold text-[#0A2540] mb-8">
-          Book Service
-        </h1>
+      <h1 className="text-3xl font-bold text-[#0A2540] mb-2">
+        Book Service
+      </h1>
 
         {/* Service Details */}
 
@@ -223,25 +225,25 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
           className="space-y-7"
         >
 
-          {/* Problem Description */}
+        {/* Issue Description */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Issue Description
+          </label>
 
-          <div>
-
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <FileText size={18} />
-              Problem Description
-            </label>
+          <div className="relative">
+            <FileText className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
 
             <textarea
-              rows={5}
               name="description"
+              rows="4"
+              required
               value={formData.description}
               onChange={handleChange}
               placeholder="Describe the issue in detail..."
               required
               className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
             />
-
           </div>
 
           {/* Preferred Date */}
@@ -422,5 +424,6 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
       </div>
 
     </main>
+     </Suspense>
   );
 }

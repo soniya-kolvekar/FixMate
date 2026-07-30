@@ -29,7 +29,7 @@ const mockDispatches = [
     id: 'DISP-4820', 
     title: 'Main Pipe Burst & Floor Flooding', 
     time: '4 mins ago', 
-    address: '104 Indiranagar 10th Main, Bengaluru', 
+    address: '104 MG Road, Kodialbail, Mangaluru', 
     priority: 'Priority Level 10', 
     category: 'PLUMBING', 
     type: 'RESIDENTIAL', 
@@ -41,14 +41,16 @@ const mockDispatches = [
     distance: '1.2 km away',
     price: '1499.00',
     customerName: 'Priya Sharma',
-    targetDispatcher: 'dispatcher@fixmate.com'
+    targetDispatcher: 'dispatcher@fixmate.com',
+    region: 'Mangaluru, Karnataka'
   }
 ];
 
 const portalDashboards = {
   customer: {
-    title: 'Customer Dashboard',
+    title: 'Customer Dashboard — Mangaluru',
     role: 'Customer',
+    region: 'Mangaluru, Karnataka',
     activeBooking: { id: 'FM-9841', service: 'Plumbing Repair', status: 'Technician En Route', eta: '14 mins' },
     history: [
       { id: 'FM-7712', service: 'AC Maintenance', date: '2026-06-15', cost: '₹699.00', status: 'Completed' },
@@ -56,28 +58,32 @@ const portalDashboards = {
     ]
   },
   technician: {
-    title: 'Technician Job Hub',
+    title: 'Technician Job Hub — Mangaluru',
     role: 'Technician',
+    region: 'Mangaluru, Karnataka',
     technicianName: 'Rajesh Kumar (Master Plumber)',
     assignedJobs: [
-      { id: 'JOB-301', customer: 'Priya Sharma', service: 'Sink Overflow Repair', address: '104 Indiranagar 10th Main, Bengaluru', time: '10:30 AM', price: '₹499.00' },
-      { id: 'JOB-302', customer: 'Aarav Mehta', service: 'Geyser Pressure Check', address: '742 Bandra West, Mumbai', time: '02:00 PM', price: '₹699.00' }
+      { id: 'JOB-301', customer: 'Priya Sharma', service: 'Sink Overflow Repair', address: '104 MG Road, Kodialbail, Mangaluru', time: '10:30 AM', price: '₹499.00' },
+      { id: 'JOB-302', customer: 'Aarav Mehta', service: 'Geyser Pressure Check', address: '742 Hampankatta Main Rd, Mangaluru', time: '02:00 PM', price: '₹699.00' }
     ]
   },
   dispatcher: {
-    title: 'Dispatcher Routing Center',
+    title: 'Dispatcher Control Terminal — Mangaluru',
     role: 'Dispatcher',
+    region: 'Mangaluru, Karnataka',
     metrics: { activeTechnicians: 18, pendingDispatches: 2, avgResponseMinutes: 16 },
     dispatcherEmail: 'dispatcher@fixmate.com',
     routes: [
-      { zone: 'Indiranagar & HSR, Bengaluru', techCount: 6, status: 'Optimal' },
-      { zone: 'Bandra & Juhu, Mumbai', techCount: 8, status: 'High Demand' },
-      { zone: 'Connaught Place, Delhi', techCount: 4, status: 'Normal' }
+      { zone: 'Kodialbail & Hampankatta, Mangaluru', techCount: 6, status: 'Optimal' },
+      { zone: 'Kadri & Bejai, Mangaluru', techCount: 8, status: 'High Demand' },
+      { zone: 'Surathkal & Mukka, Mangaluru', techCount: 4, status: 'Normal' }
     ]
   },
   admin: {
-    title: 'Admin Command Center',
+    title: 'Admin Command Center — Mangaluru Operations',
     role: 'Admin',
+    region: 'Mangaluru, Karnataka',
+    adminEmail: 'admin@fixmate.com',
     analytics: { totalUsers: 14250, completedJobs: 15480, satisfactionRate: '98.6%', monthlyRevenue: '₹21,04,000' },
     pendingApprovals: 4
   }
@@ -113,7 +119,19 @@ app.put('/api/technicians/:id/status', (req, res) => {
   });
 });
 
-// Create new urgent dispatch / delay / mid-cancellation alert
+// Real-Time Booking Status Sync across Customer, Dispatcher, Admin & Technician
+app.post('/api/bookings/status', (req, res) => {
+  const { jobId, status, technicianName, updatedAt } = req.body;
+  if (!jobId || !status) {
+    return res.status(400).json({ success: false, error: 'Job ID and status required' });
+  }
+
+  res.json({
+    success: true,
+    message: `Job #${jobId} status updated to ${status} across all portals.`,
+    data: { jobId, status, technicianName: technicianName || 'Rajesh Kumar', updatedAt: updatedAt || new Date().toISOString() }
+  });
+});
 app.post('/api/dispatches', (req, res) => {
   const item = req.body;
   if (!item || !item.id) {
