@@ -39,33 +39,68 @@ export default function TechnicianModulePage() {
     status: 'Available'
   });
 
-  // Real-time Firebase Sync for logged in Technician
+  // Real-time Firebase Sync & Persistent Availability for logged in Technician
   useEffect(() => {
-    let unsubscribeDoc = null;
+    let unsubscribeUserDoc = null;
+    let unsubscribeTechDoc = null;
+
+    // 1. Immediately restore cached availability from localStorage on mount (preserves state across refresh)
+    try {
+      const cached = localStorage.getItem('fixmate_tech_availability');
+      if (cached) setAvailability(cached);
+    } catch(e) {}
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setCurrentUser(prev => ({
-              ...prev,
-              uid: user.uid,
-              name: data.name || data.fullName || user.displayName || prev.name,
-              email: data.email || user.email || prev.email,
-              phone: data.phone || data.mobile || prev.phone,
-              specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
-              experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
-              workingArea: data.workingArea || data.serviceArea || 'Kodialbail & Hampankatta, Mangaluru',
-              avatarUrl: data.avatarUrl || prev.avatarUrl
-            }));
+      const targetUid = user?.uid || 'tech_rajesh_kumar';
+
+      const userDocRef = doc(db, 'users', targetUid);
+      const techDocRef = doc(db, 'technicians', targetUid);
+
+      // 2. Real-time subscription to technicians collection in Firestore
+      unsubscribeTechDoc = onSnapshot(techDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const dbStatus = data.availability || data.status;
+          if (dbStatus) {
+            setAvailability(dbStatus);
+            try {
+              localStorage.setItem('fixmate_tech_availability', dbStatus);
+              localStorage.setItem(`fixmate_tech_availability_${targetUid}`, dbStatus);
+            } catch(e) {}
           }
-        });
-      }
+        }
+      }, (err) => console.warn('Tech doc snapshot warning:', err));
+
+      // 3. Real-time subscription to users collection in Firestore
+      unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const dbStatus = data.availability || data.status;
+          if (dbStatus) {
+            setAvailability(dbStatus);
+            try {
+              localStorage.setItem('fixmate_tech_availability', dbStatus);
+            } catch(e) {}
+          }
+          setCurrentUser(prev => ({
+            ...prev,
+            uid: targetUid,
+            name: data.name || data.fullName || user?.displayName || prev.name,
+            email: data.email || user?.email || prev.email,
+            phone: data.phone || data.mobile || prev.phone,
+            specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
+            experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
+            workingArea: data.workingArea || data.serviceArea || 'Kodialbail & Hampankatta, Mangaluru',
+            avatarUrl: data.avatarUrl || prev.avatarUrl,
+            status: dbStatus || prev.status
+          }));
+        }
+      }, (err) => console.warn('User doc snapshot warning:', err));
     });
 
     return () => {
-      if (unsubscribeDoc) unsubscribeDoc();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+      if (unsubscribeTechDoc) unsubscribeTechDoc();
       unsubscribeAuth();
     };
   }, []);
@@ -185,6 +220,9 @@ export default function TechnicianModulePage() {
     }
 
     setAvailability(nextStatus);
+    try {
+      localStorage.setItem('fixmate_tech_availability', nextStatus);
+    } catch(e) {}
 
     const user = auth.currentUser;
     const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
@@ -443,6 +481,7 @@ export default function TechnicianModulePage() {
                 <TechPerformance 
                   jobs={jobs}
                   currentUser={currentUser}
+                  availability={availability}
                 />
               )}
 
