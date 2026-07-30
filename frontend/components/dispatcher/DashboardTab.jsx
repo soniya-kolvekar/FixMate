@@ -20,7 +20,8 @@ export default function DashboardTab({
   filteredActivities,
   handleOpenAssign,
   setIsMapExpanded,
-  showToast
+  showToast,
+  emergencyRequests = []
 }) {
   // Urgent dispatches sorted first
   const sortedDispatches = React.useMemo(() => {
@@ -32,6 +33,17 @@ export default function DashboardTab({
       return 0;
     });
   }, [dispatches]);
+
+  const techniciansOnlineCount = React.useMemo(() => {
+    return technicians.filter(tech => tech.status && tech.status.toLowerCase() !== 'offline').length;
+  }, [technicians]);
+
+  const capacityPercentage = React.useMemo(() => {
+    const onlineTechs = technicians.filter(tech => tech.status && tech.status.toLowerCase() !== 'offline');
+    if (onlineTechs.length === 0) return 0;
+    const busyTechs = onlineTechs.filter(tech => tech.status === 'Busy').length;
+    return Math.round((busyTechs / onlineTechs.length) * 100);
+  }, [technicians]);
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       
@@ -74,11 +86,13 @@ export default function DashboardTab({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Technicians Online</span>
-            <h3 className="text-3xl font-extrabold text-[#0A2540] mt-1">18</h3>
+            <h3 className="text-3xl font-extrabold text-[#0A2540] mt-1">
+              {techniciansOnlineCount < 10 ? `0${techniciansOnlineCount}` : techniciansOnlineCount}
+            </h3>
           </div>
           <div className="flex flex-col items-end gap-2.5">
             <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-600 flex items-center gap-0.5">
-              85% Capacity
+              {capacityPercentage}% Capacity
             </span>
             <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500">
               <Server size={18} />
@@ -109,88 +123,167 @@ export default function DashboardTab({
 
       </div>
 
+      {/* Emergency Broadcasts Box (Full Screen Width) */}
+      <div className="bg-white border-2 border-red-500 rounded-2xl shadow-md overflow-hidden animate-in fade-in duration-200">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-red-50/30">
+          <div>
+            <h4 className="text-base font-extrabold text-red-750 flex items-center gap-1.5 animate-pulse">
+              🚨 Emergency Broadcasts
+            </h4>
+            <p className="text-xs text-slate-500 font-semibold">Unassigned emergency calls from database</p>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-650 border border-red-200">
+            {emergencyRequests.length} Live
+          </span>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {emergencyRequests.length === 0 ? (
+            <div className="text-center py-8 text-sm font-semibold text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+              🎉 No pending emergency calls in database!
+            </div>
+          ) : (
+            emergencyRequests.map((req) => (
+              <div 
+                key={req.id} 
+                className="p-5 rounded-2xl border border-red-100 bg-red-50/10 hover:border-red-200 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm bg-red-50 text-red-600 border border-red-100 font-bold">
+                    {req.icon || '🚨'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h5 className="font-extrabold text-slate-800 text-sm">{req.customer}</h5>
+                      <span className="text-[10px] font-bold text-red-500 bg-white px-2 py-0.5 rounded border border-red-200 uppercase tracking-wider">
+                        {req.id.startsWith('#') ? req.id : '#' + req.id.substring(0, 7).toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium mt-1">
+                      {req.location} • <span className="font-extrabold text-red-600">Emergency</span>
+                    </p>
+                    
+                    <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                      <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                        {req.service.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
+                  <span className="text-sm font-black text-red-600">
+                    Priority 10
+                  </span>
+                  <button
+                    onClick={() => handleOpenAssign({
+                      id: req.id,
+                      reqId: req.id,
+                      title: `${req.service} request`,
+                      time: 'Just now',
+                      address: req.location,
+                      priority: 'Priority Level 10',
+                      category: req.service.toUpperCase(),
+                      type: 'URGENT',
+                      icon: req.icon,
+                      isEmergency: true,
+                      collectionName: req.collectionName,
+                      customerName: req.customer,
+                      techSpecialty: req.service
+                    })}
+                    className="px-5 py-2.5 bg-red-650 hover:bg-red-750 text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
+                  >
+                    Assign Now
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Urgent Broadcasts Box (Full Screen Width) */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h4 className="text-base font-extrabold text-[#0A2540]">Urgent Broadcasts</h4>
+            <p className="text-xs text-slate-400 font-medium">Unassigned emergency service calls</p>
+          </div>
+          <button 
+            onClick={() => showToast('View all unassigned jobs')}
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            View All
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {sortedDispatches.length === 0 ? (
+            <div className="text-center py-8 text-sm font-semibold text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+              🎉 All urgent broadcasts assigned!
+            </div>
+          ) : (
+            sortedDispatches.map((disp) => (
+              <div 
+                key={disp.id} 
+                className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${disp.colorClass}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm ${disp.iconBg}`}>
+                    {disp.icon}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h5 className="font-extrabold text-slate-800 text-sm">{disp.title}</h5>
+                      <span className="text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
+                        {disp.time}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium mt-1">
+                      {disp.address} • <span className="font-extrabold text-[#0A2540]">{disp.priority}</span>
+                    </p>
+                    
+                    <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                      <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                        {disp.category}
+                      </span>
+                      <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                        {disp.type}
+                      </span>
+                      {disp.recommendedTech && (
+                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-blue-100/80 text-blue-700 border border-blue-200 flex items-center gap-1">
+                          ⭐ Recommended Match: {disp.recommendedTech} ({disp.distance})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
+                  {disp.price && (
+                    <span className="text-sm font-black text-emerald-600">
+                      ₹{disp.price}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleOpenAssign(disp)}
+                    className="px-5 py-2.5 bg-[#0A2540] hover:bg-[#13395F] text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
+                  >
+                    Assign Now
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
       {/* TWO COLUMN GRID MAIN SECTIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* LEFT & MIDDLE (Col Span 2) */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Urgent Broadcasts Box */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h4 className="text-base font-extrabold text-[#0A2540]">Urgent Broadcasts</h4>
-                <p className="text-xs text-slate-400 font-medium">Unassigned emergency service calls</p>
-              </div>
-              <button 
-                onClick={() => showToast('View all unassigned jobs')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
-              >
-                View All
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {sortedDispatches.length === 0 ? (
-                <div className="text-center py-8 text-sm font-semibold text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                  🎉 All urgent broadcasts assigned!
-                </div>
-              ) : (
-                sortedDispatches.map((disp) => (
-                  <div 
-                    key={disp.id} 
-                    className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${disp.colorClass}`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm ${disp.iconBg}`}>
-                        {disp.icon}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h5 className="font-extrabold text-slate-800 text-sm">{disp.title}</h5>
-                          <span className="text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
-                            {disp.time}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 font-medium mt-1">
-                          {disp.address} • <span className="font-extrabold text-[#0A2540]">{disp.priority}</span>
-                        </p>
-                        
-                        <div className="flex items-center gap-2 flex-wrap mt-2.5">
-                          <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                            {disp.category}
-                          </span>
-                          <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                            {disp.type}
-                          </span>
-                          {disp.recommendedTech && (
-                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-blue-100/80 text-blue-700 border border-blue-200 flex items-center gap-1">
-                              ⭐ Recommended Match: {disp.recommendedTech} ({disp.distance})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
-                      {disp.price && (
-                        <span className="text-sm font-black text-emerald-600">
-                          ₹{disp.price}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handleOpenAssign(disp)}
-                        className="px-5 py-2.5 bg-[#0A2540] hover:bg-[#13395F] text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
-                      >
-                        Assign Now
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           {/* Technician Workload Box */}
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
@@ -266,53 +359,6 @@ export default function DashboardTab({
         {/* RIGHT COLUMN (Col Span 1) */}
         <div className="space-y-8">
           
-          {/* Live Activity Box */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-base font-extrabold text-[#0A2540]">Live Activity</h4>
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                </div>
-                <Activity size={16} className="text-slate-400" />
-              </div>
-
-              {/* Activity List */}
-              <div className="space-y-4 max-h-[310px] overflow-y-auto pr-1">
-                {filteredActivities.length === 0 ? (
-                  <div className="text-center py-10 text-xs font-bold text-slate-400">
-                    No activities matching criteria.
-                  </div>
-                ) : (
-                  filteredActivities.map((act) => (
-                    <div key={act.id} className="flex gap-3 text-xs">
-                      {/* Left dot & line */}
-                      <div className="flex flex-col items-center">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${act.dotColor}`}></span>
-                        <span className="w-0.5 flex-1 bg-slate-100 mt-1"></span>
-                      </div>
-                      {/* Content */}
-                      <div className="flex-1 pb-4 border-b border-slate-50 last:border-b-0 leading-tight">
-                        <div className="flex justify-between items-start gap-2">
-                          <p className="font-bold text-slate-800">{act.text}</p>
-                          <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{act.time}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-1 flex items-center gap-1.5">
-                          <span>{act.meta}</span>
-                          {act.rating && (
-                            <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 font-black">
-                              ★ {act.rating}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* MINI MAP CARD */}
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 overflow-hidden group">
             <div className="relative h-44 rounded-xl overflow-hidden bg-slate-105 border border-slate-200 shadow-inner flex items-center justify-center">

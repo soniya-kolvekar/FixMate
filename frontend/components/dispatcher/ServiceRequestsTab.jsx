@@ -51,7 +51,7 @@ export default function ServiceRequestsTab({
       </div>
 
       {/* Metrics cards row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-center justify-between">
           <div>
@@ -74,13 +74,6 @@ export default function ServiceRequestsTab({
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed (24h)</span>
             <span className="text-3xl font-extrabold text-[#0A2540] mt-1">{completedRequestsCount}</span>
-          </div>
-        </div>
-        {/* Metric 4 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Response</span>
-            <span className="text-3xl font-extrabold text-[#0A2540] mt-1">14m</span>
           </div>
         </div>
       </div>
@@ -185,24 +178,7 @@ export default function ServiceRequestsTab({
                       Assign Tech
                     </button>
                   )}
-                  {(req.status === 'ASSIGNED' || req.status === 'IN-PROGRESS') && (
-                    <>
-                      {req.status === 'ASSIGNED' && (
-                        <button
-                          onClick={() => handleStartJob(req.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
-                        >
-                          Start Job
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleCompleteJob(req.id)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
-                      >
-                        Complete
-                      </button>
-                    </>
-                  )}
+
                   {req.status === 'COMPLETED' && (
                     <span className="text-emerald-600 font-bold text-[10px] flex items-center gap-1">
                       ✓ Completed

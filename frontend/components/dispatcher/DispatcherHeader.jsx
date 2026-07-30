@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Search, Plus, ChevronDown, Bell, MessageSquare } from 'lucide-react';
+import { Search, Plus, Bell, X } from 'lucide-react';
 import StaggeredMenu from '../technician/StaggeredMenu';
 
 export default function DispatcherHeader({
@@ -15,8 +15,10 @@ export default function DispatcherHeader({
   onOpenNewRequest,
   showToast,
   staggeredMenuItems,
-  socialItems
+  socialItems,
+  notifications = []
 }) {
+  const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
   return (
     <>
       {/* CSS overrides to replace "Technician Portal" with "Dispatcher Portal" in StaggeredMenu */}
@@ -95,7 +97,7 @@ export default function DispatcherHeader({
             )}
           </div>
 
-          {/* Right Action Tools: Terminal Status Dropdown, New Request Button, Notification, Chat */}
+          {/* Right Action Tools: New Request Button, Notification Bell */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             
             {/* New Request Button */}
@@ -107,64 +109,73 @@ export default function DispatcherHeader({
               <span className="hidden sm:inline">New Request</span>
             </button>
 
-            {/* Terminal Status Dropdown */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="flex items-center gap-2 border border-slate-200 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all shadow-sm whitespace-nowrap"
-              >
-                <span className={`w-2.5 h-2.5 rounded-full ${
-                  dispatcherStatus === 'Online' ? 'bg-emerald-500' : dispatcherStatus === 'Busy' ? 'bg-amber-500' : 'bg-rose-500'
-                }`}></span>
-                <span className="hidden sm:inline">Duty: {dispatcherStatus}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
-
-              {showStatusDropdown && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200/80 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {['Online', 'Busy', 'Offline'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => {
-                        setDispatcherStatus(st);
-                        setShowStatusDropdown(false);
-                        showToast(`Status updated to: ${st}`);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
-                    >
-                      <span className={`w-2.5 h-2.5 rounded-full ${
-                        st === 'Online' ? 'bg-emerald-500' : st === 'Busy' ? 'bg-amber-500' : 'bg-rose-500'
-                      }`}></span>
-                      <span>{st}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Notification Center Bell */}
             <button 
-              onClick={() => showToast('🔔 No new unread alerts')}
+              onClick={() => setShowNotificationDrawer(true)}
               className="relative text-slate-500 hover:text-regalNavy transition-colors p-2 rounded-xl hover:bg-slate-100/60"
               title="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
-            </button>
-
-            {/* Dispatch Chat */}
-            <button 
-              onClick={() => showToast('💬 Opening live dispatch chat room')}
-              className="text-slate-500 hover:text-regalNavy transition-colors p-2 rounded-xl hover:bg-slate-100/60"
-              title="Live Dispatch Chat"
-            >
-              <MessageSquare className="w-5 h-5" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
+                  {notifications.length}
+                </span>
+              )}
             </button>
 
           </div>
 
         </div>
       </header>
+
+      {/* Dispatcher Notification Drawer */}
+      {showNotificationDrawer && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between border-l border-slate-200">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-[#0A2540]" />
+                  <h3 className="text-base font-extrabold text-[#0A2540]">Notification Center</h3>
+                </div>
+                <button 
+                  onClick={() => setShowNotificationDrawer(false)}
+                  className="text-slate-400 hover:text-slate-650"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(100vh-180px)] pr-1">
+                {notifications.length === 0 ? (
+                  <p className="text-xs font-semibold text-slate-400 text-center py-8">
+                    No new notifications
+                  </p>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                      <div className="flex justify-between items-start">
+                        <h5 className="text-xs font-extrabold text-slate-800">{n.title}</h5>
+                        <span className="text-[10px] font-bold text-slate-400">{n.time}</span>
+                      </div>
+                      <p className="text-xs text-slate-650 font-medium">{n.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
+              <button 
+                onClick={() => setShowNotificationDrawer(false)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors text-center"
+              >
+                Close Drawer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

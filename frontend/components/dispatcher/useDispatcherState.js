@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebase/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function useDispatcherState() {
   const router = useRouter();
@@ -21,47 +21,8 @@ export default function useDispatcherState() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const [requests, setRequests] = useState([
-    { id: '#RQ-9082', customer: 'Alice Montgomery', service: 'Plumbing', status: 'UNASSIGNED', location: 'Oak Ridge, Sector 4', initials: 'AM', color: 'bg-blue-105 text-blue-700', icon: '💧' },
-    { id: '#RQ-9079', customer: 'Robert Kovich', service: 'AC Maintenance', status: 'ASSIGNED', location: 'Downtown, Maple Ave', initials: 'RK', color: 'bg-indigo-900 text-white', icon: '❄️' },
-    { id: '#RQ-9077', customer: 'James Wilson', service: 'Electrical', status: 'IN-PROGRESS', location: 'Westside, Park Lane', initials: 'JW', color: 'bg-blue-950 text-white', icon: '⚡' },
-    { id: '#RQ-9075', customer: 'Elena Lopez', service: 'Appliance', status: 'UNASSIGNED', location: 'North View Dr.', initials: 'EL', color: 'bg-slate-200 text-slate-700', icon: '🧺' },
-    { id: '#RQ-9074', customer: 'Bill Hader', service: 'Plumbing', status: 'IN-PROGRESS', location: 'Lake Crescent 10', initials: 'BH', color: 'bg-sky-100 text-sky-700', icon: '💧' },
-    { id: '#RQ-9073', customer: 'Sarah Connor', service: 'AC Maintenance', status: 'COMPLETED', location: 'Tech Plaza, Sec 2', initials: 'SC', color: 'bg-indigo-100 text-indigo-800', icon: '❄️' },
-    { id: '#RQ-9072', customer: 'John Connor', service: 'Appliance', status: 'COMPLETED', location: 'Sunset Blvd 14', initials: 'JC', color: 'bg-slate-200 text-slate-800', icon: '🧺' },
-    { id: '#RQ-9071', customer: 'Clara Oswald', service: 'Cleaning', status: 'UNASSIGNED', location: 'Gallifrey Lane 1', initials: 'CO', color: 'bg-emerald-100 text-emerald-800', icon: '🧹' },
-    { id: '#RQ-9070', customer: 'Rose Tyler', service: 'Electrical', status: 'ASSIGNED', location: 'Bad Wolf St. 9', initials: 'RT', color: 'bg-blue-900 text-white', icon: '⚡' },
-    { id: '#RQ-9069', customer: 'Martha Jones', service: 'Plumbing', status: 'IN-PROGRESS', location: 'Harrow Hospital', initials: 'MJ', color: 'bg-blue-50 text-blue-800', icon: '💧' },
-    { id: '#RQ-9068', customer: 'Donna Noble', service: 'Cleaning', status: 'COMPLETED', location: 'Chiswick Avenue', initials: 'DN', color: 'bg-emerald-50 text-emerald-700', icon: '🧹' },
-    { id: '#RQ-9067', customer: 'Amy Pond', service: 'Appliance', status: 'COMPLETED', location: 'Leadworth Drive', initials: 'AP', color: 'bg-slate-300 text-slate-800', icon: '🧺' },
-    { id: '#RQ-9066', customer: 'Rory Williams', service: 'Plumbing', status: 'UNASSIGNED', location: 'Leadworth Drive', initials: 'RW', color: 'bg-blue-100 text-blue-700', icon: '💧' }
-  ]);
+  const [requests, setRequests] = useState([]);
 
-  // Tab 2 Metrics calculations
-  const unassignedRequestsCount = useMemo(() => {
-    return requests.filter(r => r.status === 'UNASSIGNED').length + 8;
-  }, [requests]);
-
-  const inProgressRequestsCount = useMemo(() => {
-    return requests.filter(r => r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS').length + 43;
-  }, [requests]);
-
-  const completedRequestsCount = useMemo(() => {
-    return requests.filter(r => r.status === 'COMPLETED').length + 152;
-  }, [requests]);
-  
-  // Toast notifications state
-  const [toast, setToast] = useState(null);
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  // Metrics States
-  const [activeJobsCount, setActiveJobsCount] = useState(42);
-  const [totalRequestsCount, setTotalRequestsCount] = useState(1284);
-  const [pendingEmergenciesCount, setPendingEmergenciesCount] = useState(3);
-  
   // Unassigned urgent broadcasts
   const [dispatches, setDispatches] = useState([
     { 
@@ -120,6 +81,214 @@ export default function useDispatcherState() {
     }
   ]);
 
+  // Live Firestore subscription for Bookings & Emergency Bookings
+  useEffect(() => {
+    let unsubBookings = null;
+    let unsubEmergency = null;
+    
+    let bookingsList = [];
+    let emergencyList = [];
+    
+    const getServiceType = (docCategory, docService) => {
+      const cat = (docCategory || docService || '').toLowerCase();
+      if (cat.includes('plumb')) return 'Plumbing';
+      if (cat.includes('elect')) return 'Electrical';
+      if (cat.includes('ac_') || cat.includes('ac ') || cat.includes('hvac') || cat.includes('air conditioning')) return 'AC Maintenance';
+      if (cat.includes('appliance')) return 'Appliance';
+      if (cat.includes('clean')) return 'Cleaning';
+      if (cat.includes('carpen')) return 'Carpentry';
+      if (cat.includes('paint')) return 'Painting';
+      if (cat.includes('pest')) return 'Pest Control';
+      return docService || docCategory || 'Other';
+    };
+
+    const getServiceIcon = (serviceType) => {
+      const s = serviceType.toLowerCase();
+      if (s.includes('plumb')) return '💧';
+      if (s.includes('elect')) return '⚡';
+      if (s.includes('ac ') || s.includes('ac_') || s.includes('hvac') || s.includes('air conditioning') || s.includes('maintenance')) return '❄️';
+      if (s.includes('appliance')) return '🧺';
+      if (s.includes('clean')) return '🧹';
+      if (s.includes('carpen')) return '🔨';
+      if (s.includes('paint')) return '🎨';
+      if (s.includes('pest')) return '🐜';
+      return '🛠️';
+    };
+
+    const getServiceColor = (serviceType) => {
+      const s = serviceType.toLowerCase();
+      if (s.includes('plumb')) return 'bg-blue-100 text-blue-700';
+      if (s.includes('elect')) return 'bg-yellow-100 text-yellow-800';
+      if (s.includes('ac ') || s.includes('ac_') || s.includes('hvac') || s.includes('air conditioning') || s.includes('maintenance')) return 'bg-indigo-100 text-indigo-800';
+      if (s.includes('appliance')) return 'bg-slate-200 text-slate-800';
+      if (s.includes('clean')) return 'bg-emerald-100 text-emerald-800';
+      if (s.includes('carpen')) return 'bg-amber-100 text-amber-800';
+      if (s.includes('paint')) return 'bg-purple-100 text-purple-800';
+      if (s.includes('pest')) return 'bg-red-100 text-red-800';
+      return 'bg-slate-100 text-slate-700';
+    };
+
+    const processLists = () => {
+      const combined = [];
+      
+      const mapItem = (d, isEmergency) => {
+        const data = d.data();
+        const rawStatus = data.status || (isEmergency ? 'Emergency Pending' : 'Pending');
+        
+        let status = 'UNASSIGNED';
+        const s = rawStatus.toUpperCase();
+        if (s.includes('PENDING')) {
+          status = 'UNASSIGNED';
+        } else if (s.includes('ASSIGNED') || s.includes('ACCEPTED')) {
+          status = 'ASSIGNED';
+        } else if (s.includes('IN PROGRESS') || s.includes('IN-PROGRESS') || s.includes('PROGRESS')) {
+          status = 'IN-PROGRESS';
+        } else if (s.includes('COMPLETED')) {
+          status = 'COMPLETED';
+        } else if (s.includes('CANCEL')) {
+          status = 'CANCELLED';
+        }
+        
+        const serviceType = getServiceType(data.category, data.service);
+        const customer = data.customerName || data.customerEmail || 'Customer';
+        const initials = customer.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'CU';
+        
+        return {
+          id: d.id,
+          customer,
+          initials,
+          service: serviceType,
+          status,
+          rawStatus,
+          location: data.address || data.location || 'Mangaluru',
+          color: getServiceColor(serviceType),
+          icon: getServiceIcon(serviceType),
+          assignedTech: data.technicianName || data.assignedTech || null,
+          isEmergency,
+          collectionName: isEmergency ? 'emergencyBookings' : 'bookings',
+          createdAt: data.createdAt
+        };
+      };
+      
+      bookingsList.forEach(item => combined.push(mapItem(item, false)));
+      emergencyList.forEach(item => combined.push(mapItem(item, true)));
+      
+      // Sort by createdAt descending
+      combined.sort((a, b) => {
+        const tA = a.createdAt?.seconds || 0;
+        const tB = b.createdAt?.seconds || 0;
+        return tB - tA;
+      });
+      
+      setRequests(combined);
+    };
+
+    try {
+      const bookingsRef = collection(db, 'bookings');
+      unsubBookings = onSnapshot(bookingsRef, (snapshot) => {
+        bookingsList = snapshot.docs;
+        processLists();
+      }, (err) => console.warn('Bookings subscription warning:', err));
+    } catch (e) {
+      console.warn('Error listening to bookings:', e);
+    }
+
+    try {
+      const emergencyRef = collection(db, 'emergencyBookings');
+      unsubEmergency = onSnapshot(emergencyRef, (snapshot) => {
+        emergencyList = snapshot.docs;
+        processLists();
+      }, (err) => console.warn('Emergency bookings subscription warning:', err));
+    } catch (e) {
+      console.warn('Error listening to emergency bookings:', e);
+    }
+
+    return () => {
+      if (unsubBookings) unsubBookings();
+      if (unsubEmergency) unsubEmergency();
+    };
+  }, []);
+
+  // Tab 2 Metrics calculations
+  const unassignedRequestsCount = useMemo(() => {
+    return requests.filter(r => r.status === 'UNASSIGNED').length;
+  }, [requests]);
+
+  const inProgressRequestsCount = useMemo(() => {
+    return requests.filter(r => r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS').length;
+  }, [requests]);
+
+  const completedRequestsCount = useMemo(() => {
+    return requests.filter(r => r.status === 'COMPLETED').length;
+  }, [requests]);
+  
+  // Toast notifications state
+  const [toast, setToast] = useState(null);
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Metrics States
+  const activeJobsCount = useMemo(() => {
+    return requests.filter(r => r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS').length;
+  }, [requests]);
+
+  const totalRequestsCount = useMemo(() => {
+    return requests.length;
+  }, [requests]);
+
+  const pendingEmergenciesCount = useMemo(() => {
+    const fromRequests = requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED').length;
+    const fromDispatches = dispatches.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
+    return fromRequests + fromDispatches;
+  }, [requests, dispatches]);
+
+  const emergencyRequests = useMemo(() => {
+    return requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED');
+  }, [requests]);
+  
+  const [notifications, setNotifications] = useState([]);
+
+  // Live Firestore subscription for dispatcher alerts / notifications
+  useEffect(() => {
+    let unsubAlerts = null;
+    try {
+      const alertsRef = collection(db, 'dispatcher_alerts');
+      unsubAlerts = onSnapshot(alertsRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              title: data.title || 'System Alert',
+              message: data.notes || data.message || 'No additional details.',
+              time: data.time || 'Just now',
+              createdAt: data.createdAt
+            };
+          });
+          
+          // Sort by createdAt descending
+          list.sort((a, b) => {
+            const tA = new Date(a.createdAt).getTime() || 0;
+            const tB = new Date(b.createdAt).getTime() || 0;
+            return tB - tA;
+          });
+          setNotifications(list);
+        } else {
+          setNotifications([]);
+        }
+      }, (err) => console.warn('Alerts subscription warning:', err));
+    } catch (e) {
+      console.warn('Error listening to dispatcher alerts:', e);
+    }
+    return () => {
+      if (unsubAlerts) unsubAlerts();
+    };
+  }, []);
+  
+
+
   // Dynamic fetching of Urgent Broadcasts from API, Firestore & LocalStorage
   const fetchDispatches = async () => {
     try {
@@ -130,8 +299,6 @@ export default function useDispatcherState() {
         const combined = [...localData, ...data.data];
         const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
         setDispatches(unique);
-        const emergencies = unique.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
-        setPendingEmergenciesCount(emergencies);
         return;
       }
     } catch (e) {
@@ -154,8 +321,6 @@ export default function useDispatcherState() {
             const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
             return unique;
           });
-          const emergencies = firestoreItems.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
-          setPendingEmergenciesCount(prev => Math.max(prev, emergencies));
 
           // Toast alert for newly arrived cancellation / delay alert
           const latestAlert = firestoreItems[0];
@@ -185,15 +350,8 @@ export default function useDispatcherState() {
     };
   }, []);
 
-  // Technicians List
-  const [technicians, setTechnicians] = useState([
-    { name: 'Rajesh Kumar', assigned: 2, travel: 1, status: 'Available', specialty: 'Plumbing', zone: 'Kodialbail & Hampankatta, Mangaluru' },
-    { name: 'Dave R.', assigned: 4, travel: 2, status: 'Available', specialty: 'Plumbing', zone: 'Kadri & Bejai, Mangaluru' },
-    { name: 'Sarah J.', assigned: 3, travel: 4, status: 'Available', specialty: 'Electrical', zone: 'Hampankatta Zone, Mangaluru' },
-    { name: 'Mike T.', assigned: 5, travel: 1, status: 'Busy', specialty: 'HVAC', zone: 'Hampankatta Zone, Mangaluru' },
-    { name: 'Elena K.', assigned: 2, travel: 3, status: 'Available', specialty: 'Carpentry', zone: 'Surathkal & Mukka, Mangaluru' },
-    { name: 'James L.', assigned: 1, travel: 1, status: 'Offline', specialty: 'Appliance Repair', zone: 'Ullal & Thokottu, Mangaluru' }
-  ]);
+  // Technicians List (Real-Time from Firestore)
+  const [technicians, setTechnicians] = useState([]);
 
   // Live Firestore subscription for Technicians Roster & Real-Time Availability Status
   useEffect(() => {
@@ -209,24 +367,22 @@ export default function useDispatcherState() {
             return {
               id: docSnap.id,
               name: data.name || data.fullName || 'Rajesh Kumar',
-              assigned: data.assignedJobsCount || 2,
+              assigned: data.assignedJobsCount || 0,
               travel: 1,
               status: formattedStatus,
               specialty: data.specialization || (Array.isArray(data.skills) ? data.skills.join(', ') : data.specialty) || 'Plumbing',
-              zone: data.workingArea || data.serviceArea || data.zone || 'Kodialbail & Hampankatta, Mangaluru'
+              zone: data.workingArea || data.serviceArea || data.zone || 'Kodialbail & Hampankatta, Mangaluru',
+              phone: data.phone || data.mobile || '+91 98765 43210'
             };
           });
 
-          setTechnicians(prev => {
-            const map = new Map();
-            firestoreTechs.forEach(t => map.set(t.name, t));
-            prev.forEach(t => {
-              if (!map.has(t.name)) {
-                map.set(t.name, t);
-              }
-            });
-            return Array.from(map.values());
+          setRequests(prevRequests => {
+            return prevRequests;
           });
+
+          setTechnicians(firestoreTechs);
+        } else {
+          setTechnicians([]);
         }
       }, (err) => console.warn('Technicians subscription warning:', err));
     } catch(err) {
@@ -238,27 +394,101 @@ export default function useDispatcherState() {
     };
   }, []);
 
-  // Live Technicians (Hyderabad Sector Fleet)
-  const [liveTechnicians, setLiveTechnicians] = useState([
-    { id: 't1', name: 'Marcus Chen', role: 'HVAC Specialist', eta: '8 MIN', destination: '442 Jubilee Hills Rd, Hyderabad', currentLocation: 'Road No. 36, Jubilee Hills, Hyderabad', status: 'On the Way', progress: null, initials: 'MC', cx: 300, cy: 200 },
-    { id: 't2', name: 'Sarah Jenkins', role: 'Plumbing Lead', eta: '14 MIN', destination: '1290 Banjara Hills, Hyderabad', currentLocation: 'Panjagutta Junction, Hyderabad', status: 'On the Way', progress: null, initials: 'SJ', cx: 150, cy: 350 },
-    { id: 't3', name: 'David Wilson', role: 'Electrician', eta: null, destination: 'Cyber Towers, Hitec City, Hyderabad', currentLocation: 'Mindspace IT Park, Hitec City, Hyderabad', status: 'Service Started', progress: 65, initials: 'DW', cx: 450, cy: 280 }
-  ]);
+  // Live Technicians (Dynamically derived from Firestore technicians and bookings)
+  const liveTechnicians = useMemo(() => {
+    const locations = [
+      'Kodialbail, Mangaluru',
+      'Hampankatta, Mangaluru',
+      'Kadri, Mangaluru',
+      'Bejai, Mangaluru',
+      'Lalbagh, Mangaluru',
+      'Kavoor, Mangaluru',
+      'Urwa, Mangaluru',
+      'Attavar, Mangaluru',
+      'Kulshekar, Mangaluru'
+    ];
+
+    const hashStr = (str) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return Math.abs(hash);
+    };
+
+    const onlineTechs = technicians.filter(t => t.status && t.status.toLowerCase() !== 'offline');
+
+    return onlineTechs.map((tech) => {
+      // Find active request if any
+      const activeRequest = requests.find(r => 
+        (r.assignedTech === tech.name) && 
+        (r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS')
+      );
+
+      const hashValue = hashStr(tech.id || tech.name);
+      const isBusy = tech.status === 'Busy' || (activeRequest && activeRequest.status === 'IN-PROGRESS');
+
+      // Coordinate placement in SVG grid (cx: 150-650, cy: 150-500)
+      const cx = 150 + (hashValue % 500);
+      const cy = 150 + ((hashValue >> 2) % 350);
+
+      const initials = tech.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'TK';
+
+      // Pick neighborhood from Mangaluru list based on hash
+      const defaultLoc = locations[hashValue % locations.length];
+      const destLoc = locations[(hashValue + 1) % locations.length];
+
+      if (isBusy) {
+        return {
+          id: tech.id,
+          name: tech.name,
+          role: tech.specialty,
+          eta: null,
+          destination: activeRequest ? activeRequest.location : destLoc,
+          currentLocation: activeRequest ? activeRequest.location : defaultLoc,
+          status: 'Service Started',
+          progress: 30 + (hashValue % 50), // Dynamic progress (30% - 80%)
+          initials,
+          cx,
+          cy
+        };
+      } else {
+        return {
+          id: tech.id,
+          name: tech.name,
+          role: tech.specialty,
+          eta: `${5 + (hashValue % 15)} MIN`, // Dynamic ETA (5 - 20 min)
+          destination: activeRequest ? activeRequest.location : destLoc,
+          currentLocation: defaultLoc,
+          status: 'On the Way',
+          progress: null,
+          initials,
+          cx,
+          cy
+        };
+      }
+    });
+  }, [technicians, requests]);
 
   const [selectedTechForStatus, setSelectedTechForStatus] = useState(null);
 
-  const handleTechStatusChange = (techId, newStatus) => {
-    setLiveTechnicians(prev => prev.map(t => {
-      if (t.id === techId) {
-        let newProgress = t.progress;
-        if (newStatus === 'Service Started' && !newProgress) newProgress = 10;
-        if (newStatus === 'Service Completed') newProgress = 100;
-        return { ...t, status: newStatus, progress: newProgress };
-      }
-      return t;
-    }));
+  const handleTechStatusChange = async (techId, newStatus) => {
+    let dbStatus = 'ONLINE';
+    if (newStatus === 'Service Started' || newStatus === 'Busy') {
+      dbStatus = 'BUSY';
+    } else if (newStatus === 'Offline') {
+      dbStatus = 'OFFLINE';
+    }
+
+    try {
+      const techRef = doc(db, 'technicians', techId);
+      await updateDoc(techRef, { availability: dbStatus, status: dbStatus });
+      showToast(`Status of technician updated to ${newStatus} in database.`);
+    } catch (err) {
+      console.error("Error updating technician status in database:", err);
+      showToast("❌ Failed to update technician status.");
+    }
     setSelectedTechForStatus(null);
-    showToast(`Status updated to ${newStatus}`);
   };
 
   // Live Activity Stream
@@ -378,40 +608,65 @@ export default function useDispatcherState() {
       title: `${req.service} request`,
       time: 'Just now',
       address: req.location,
-      priority: 'Priority Level 8',
+      priority: req.isEmergency ? 'Priority Level 10' : 'Priority Level 8',
       category: req.service.toUpperCase(),
-      type: 'RESIDENTIAL',
-      icon: req.icon
+      type: req.isEmergency ? 'URGENT' : 'RESIDENTIAL',
+      icon: req.icon,
+      isEmergency: req.isEmergency,
+      collectionName: req.collectionName,
+      customerName: req.customer,
+      techSpecialty: req.service
     });
   };
 
-  const handleStartJob = (id) => {
-    setRequests(prev => prev.map(r => {
-      if (r.id === id) {
-        return { ...r, status: 'IN-PROGRESS' };
-      }
-      return r;
-    }));
-    showToast(`⚡ Job ${id} is now IN-PROGRESS.`);
-    setActivities(prev => [
-      { id: Date.now(), text: `Job ${id} started`, time: 'Just now', meta: 'Status updated to IN-PROGRESS', type: 'info', dotColor: 'bg-blue-500' },
-      ...prev
-    ]);
+  const handleStartJob = async (id) => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    
+    const colName = req.collectionName || (req.isEmergency ? 'emergencyBookings' : 'bookings');
+    const updatePayload = {
+      status: 'In Progress',
+      updatedAt: new Date().toISOString()
+    };
+    
+    try {
+      await updateDoc(doc(db, colName, id), updatePayload);
+      await setDoc(doc(db, 'jobs', id), { id, status: 'In Progress', updatedAt: new Date().toISOString() }, { merge: true });
+      showToast(`⚡ Job ${id} is now IN-PROGRESS.`);
+      
+      setActivities(prev => [
+        { id: Date.now(), text: `Job ${id} started`, time: 'Just now', meta: 'Status updated to IN-PROGRESS', type: 'info', dotColor: 'bg-blue-500' },
+        ...prev
+      ]);
+    } catch (err) {
+      console.error("Error starting job in Firestore:", err);
+      showToast("❌ Failed to start job.");
+    }
   };
 
-  const handleCompleteJob = (id) => {
-    setRequests(prev => prev.map(r => {
-      if (r.id === id) {
-        return { ...r, status: 'COMPLETED' };
-      }
-      return r;
-    }));
-    showToast(`✅ Job ${id} marked as COMPLETED.`);
-    setActivities(prev => [
-      { id: Date.now(), text: `Job ${id} completed`, time: 'Just now', meta: 'Status updated to COMPLETED', type: 'success', dotColor: 'bg-emerald-500' },
-      ...prev
-    ]);
-    setActiveJobsCount(prev => Math.max(0, prev - 1));
+  const handleCompleteJob = async (id) => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    
+    const colName = req.collectionName || (req.isEmergency ? 'emergencyBookings' : 'bookings');
+    const updatePayload = {
+      status: 'Completed',
+      updatedAt: new Date().toISOString()
+    };
+    
+    try {
+      await updateDoc(doc(db, colName, id), updatePayload);
+      await setDoc(doc(db, 'jobs', id), { id, status: 'Completed', updatedAt: new Date().toISOString() }, { merge: true });
+      showToast(`✅ Job ${id} marked as COMPLETED.`);
+      
+      setActivities(prev => [
+        { id: Date.now(), text: `Job ${id} completed`, time: 'Just now', meta: 'Status updated to COMPLETED', type: 'success', dotColor: 'bg-emerald-500' },
+        ...prev
+      ]);
+    } catch (err) {
+      console.error("Error completing job in Firestore:", err);
+      showToast("❌ Failed to complete job.");
+    }
   };
 
   const handleExportCSV = () => {
@@ -435,7 +690,7 @@ export default function useDispatcherState() {
     setAssigningDispatch(dispatch);
   };
 
-  const handleConfirmAssignment = (techName) => {
+  const handleConfirmAssignment = async (techName) => {
     if (!assigningDispatch) return;
 
     const dispatchId = assigningDispatch.id;
@@ -450,16 +705,47 @@ export default function useDispatcherState() {
       window.dispatchEvent(new Event('fixmate_dispatch_updated'));
     } catch(e) {}
 
-    setRequests(prev => prev.map(r => {
-      if (r.id === assigningDispatch.id || r.id === assigningDispatch.reqId) {
-        return { ...r, status: 'ASSIGNED', assignedTech: techName };
-      }
-      return r;
-    }));
+    // Find if there is a corresponding booking in requests
+    const requestItem = requests.find(r => r.id === assigningDispatch.id || r.id === assigningDispatch.reqId);
+    const selectedTech = technicians.find(t => t.name === techName);
 
-    setActiveJobsCount(prev => prev + 1);
-    if (assigningDispatch.priority.includes('10') || assigningDispatch.type === 'URGENT') {
-      setPendingEmergenciesCount(prev => Math.max(0, prev - 1));
+    if (requestItem) {
+      const colName = requestItem.collectionName || (requestItem.isEmergency ? 'emergencyBookings' : 'bookings');
+      const bookingRef = doc(db, colName, requestItem.id);
+      
+      const updatePayload = {
+        status: 'Assigned',
+        technicianId: selectedTech?.id || selectedTech?.uid || 'tech_rajesh_kumar',
+        technicianName: techName,
+        technicianPhone: selectedTech?.phone || '+91 98765 43210',
+        updatedAt: new Date().toISOString()
+      };
+      
+      try {
+        await updateDoc(bookingRef, updatePayload);
+        
+        // Also update/set doc in jobs collection
+        const jobPayload = {
+          id: requestItem.id,
+          jobId: requestItem.id,
+          status: 'Assigned',
+          technicianName: techName,
+          technicianPhone: selectedTech?.phone || '+91 98765 43210',
+          title: assigningDispatch.title || `${requestItem.service} request`,
+          customerName: requestItem.customer || 'Customer',
+          location: requestItem.location || 'Mangaluru',
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'jobs', requestItem.id), jobPayload, { merge: true });
+
+        // Update technician's assigned jobs count in Firestore
+        if (selectedTech && selectedTech.id) {
+          const techRef = doc(db, 'technicians', selectedTech.id);
+          await setDoc(techRef, { assignedJobsCount: (selectedTech.assigned || 0) + 1 }, { merge: true });
+        }
+      } catch (err) {
+        console.error("Error setting assignment in Firestore:", err);
+      }
     }
 
     const newActivity = {
@@ -477,74 +763,54 @@ export default function useDispatcherState() {
       ...prev
     ]);
 
-    setTechnicians(prev => prev.map(t => {
-      if (t.name === techName) {
-        return { ...t, assigned: t.assigned + 1 };
-      }
-      return t;
-    }));
-
     showToast(`✅ Successfully assigned ${techName} to ${assigningDispatch.title}!`);
     setAssigningDispatch(null);
   };
 
-  const handleCreateRequest = (e) => {
+  const handleCreateRequest = async (e) => {
     e.preventDefault();
     if (!newRequestData.title || !newRequestData.address) return;
 
-    const newId = `DISP-${Math.floor(4800 + Math.random() * 200)}`;
     const isEmerg = newRequestData.isEmergency;
+    const categoryName = newRequestData.category === 'AC_SERVICE' ? 'AC Maintenance' : newRequestData.category === 'PLUMBING' ? 'Plumbing' : newRequestData.category === 'ELECTRICAL' ? 'Electrical' : newRequestData.category === 'CARPENTRY' ? 'Carpentry' : 'Appliance';
 
-    const newDispatchItem = {
-      id: newId,
-      title: newRequestData.title,
-      time: 'Just now',
+    const bookingData = {
+      customerId: 'walk-in-dispatcher',
+      customerName: 'Walk-In Request',
+      customerEmail: 'dispatcher@fixmate.com',
+
+      category: newRequestData.category.toLowerCase(),
+      service: categoryName,
+      price: isEmerg ? 1499 : 499,
+      duration: '1-2 hrs',
+
+      description: newRequestData.title,
       address: newRequestData.address,
-      priority: isEmerg ? 'Priority Level 10' : 'Priority Level 5',
-      category: newRequestData.category,
-      type: newRequestData.type,
-      icon: newRequestData.category === 'ELECTRICAL' ? '⚡' : '🏠',
-      colorClass: isEmerg ? 'bg-rose-50 border-rose-100 hover:border-rose-300' : 'bg-slate-50 border-slate-100 hover:border-slate-300',
-      iconBg: isEmerg ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'
+      location: newRequestData.address,
+      date: null,
+      timeSlot: null,
+
+      requestPreviousTechnician: false,
+      isEmergency: isEmerg,
+
+      notes: 'Created by dispatcher',
+      status: isEmerg ? 'Emergency Pending' : 'Pending',
+
+      technicianId: null,
+      dispatcherId: 'dispatcher@fixmate.com',
+
+      createdAt: serverTimestamp()
     };
 
-    if (isEmerg) {
-      setDispatches(prev => [newDispatchItem, ...prev]);
-      setPendingEmergenciesCount(prev => prev + 1);
-
-      fetch('http://localhost:5000/api/dispatches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newDispatchItem)
-      }).catch(() => {});
-
-      try {
-        const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-        localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([newDispatchItem, ...local]));
-        window.dispatchEvent(new Event('fixmate_dispatch_updated'));
-      } catch(e) {}
-    } else {
-      showToast(`Created Standard Request for ${newRequestData.title}. Logged in Requests tab.`);
+    const colName = isEmerg ? 'emergencyBookings' : 'bookings';
+    try {
+      await addDoc(collection(db, colName), bookingData);
+      showToast(`🔥 Created ${isEmerg ? 'Emergency' : 'Standard'} Request for "${newRequestData.title}" in Firestore!`);
+    } catch (err) {
+      console.error("Error creating request in Firestore:", err);
+      showToast("❌ Failed to create request in database.");
     }
 
-    setTotalRequestsCount(prev => prev + 1);
-
-    const categoryName = newRequestData.category === 'AC_SERVICE' ? 'AC Maintenance' : newRequestData.category === 'PLUMBING' ? 'Plumbing' : newRequestData.category === 'ELECTRICAL' ? 'Electrical' : newRequestData.category === 'CARPENTRY' ? 'Carpentry' : 'Appliance';
-    const categoryIcon = newRequestData.category === 'AC_SERVICE' ? '❄️' : newRequestData.category === 'PLUMBING' ? '💧' : newRequestData.category === 'ELECTRICAL' ? '⚡' : newRequestData.category === 'CARPENTRY' ? '🔨' : '🧺';
-    const initialsLetters = newRequestData.title.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'RQ';
-    
-    const newReqItem = {
-      id: `#RQ-${Math.floor(9000 + Math.random() * 80)}`,
-      customer: 'Walk-In Request',
-      service: categoryName,
-      status: isEmerg ? 'UNASSIGNED' : 'ASSIGNED',
-      location: newRequestData.address,
-      initials: initialsLetters,
-      color: 'bg-slate-100 text-slate-700',
-      icon: categoryIcon
-    };
-    setRequests(prev => [newReqItem, ...prev]);
-    
     setActivities(prev => [
       { 
         id: Date.now(), 
@@ -562,7 +828,6 @@ export default function useDispatcherState() {
       ...prev
     ]);
 
-    showToast(`🔥 New request created successfully!`);
     setIsNewRequestOpen(false);
     setNewRequestData({
       title: '',
@@ -640,6 +905,8 @@ export default function useDispatcherState() {
     handleConfirmAssignment,
     handleCreateRequest,
     staggeredMenuItems,
-    socialItems
+    socialItems,
+    notifications,
+    emergencyRequests
   };
 }
