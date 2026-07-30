@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Calendar,
@@ -10,7 +10,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
-export default function BookingPage() {
+function BookingPageContent() {
   const searchParams = useSearchParams();
 
   const category = searchParams.get('category');
@@ -43,7 +43,7 @@ export default function BookingPage() {
     } else if (type === 'file') {
       setFormData({
         ...formData,
-        images: Array.from(files),
+        images: [...files],
       });
     } else {
       setFormData({
@@ -53,7 +53,7 @@ export default function BookingPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     console.log({
@@ -66,184 +66,162 @@ export default function BookingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 py-10">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+    <div className="max-w-4xl mx-auto px-6 py-10">
 
-        <h1 className="text-3xl font-bold text-[#0A2540] mb-8">
-          Book Service
-        </h1>
+      <h1 className="text-3xl font-bold text-[#0A2540] mb-2">
+        Book Service
+      </h1>
 
-        {/* Service Details */}
+      <p className="text-slate-600 mb-8">
+        Category: <span className="font-semibold text-blue-600">{category || 'General'}</span>
+      </p>
 
-        <div className="bg-slate-100 rounded-xl p-5 mb-8">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-md border border-slate-200 space-y-6">
 
-          <h2 className="font-bold text-lg text-[#0A2540] flex items-center gap-2">
-            <Wrench size={20} />
-            Service Details
-          </h2>
+        {/* Issue Description */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Issue Description
+          </label>
 
-          <div className="mt-4 space-y-2">
-            <p><strong>Category:</strong> {category}</p>
-            <p><strong>Service:</strong> {service}</p>
-          </div>
-
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-7"
-        >
-
-          {/* Problem Description */}
-
-          <div>
-
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <FileText size={18} />
-              Problem Description
-            </label>
+          <div className="relative">
+            <FileText className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
 
             <textarea
-              rows={5}
               name="description"
+              rows="4"
+              required
               value={formData.description}
               onChange={handleChange}
-              placeholder="Describe the issue..."
-              className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
-              required
+              placeholder="Describe the issue in detail..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
             />
-
           </div>
+        </div>
 
-          {/* Upload Images */}
+        {/* Schedule Date */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Preferred Date
+          </label>
 
-          <div>
-
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <Upload size={18} />
-              Upload Images
-            </label>
-
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleChange}
-              className="w-full border rounded-xl p-3"
-            />
-
-            <p className="text-sm text-slate-500 mt-2">
-              Upload up to 5 images.
-            </p>
-
-          </div>
-
-          {/* Date */}
-
-          <div>
-
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <Calendar size={18} />
-              Preferred Date
-            </label>
+          <div className="relative">
+            <Calendar className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
 
             <input
               type="date"
               name="date"
+              required
               value={formData.date}
               onChange={handleChange}
-              className="w-full border rounded-xl p-3"
-              required
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
             />
-
           </div>
+        </div>
 
-          {/* Time Slots */}
+        {/* Preferred Time Slot */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Preferred Time Slot
+          </label>
 
-          <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {timeSlots.map((slot) => (
+              <label
+                key={slot}
+                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${
+                  formData.timeSlot === slot
+                    ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
+                    : 'border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="timeSlot"
+                  value={slot}
+                  checked={formData.timeSlot === slot}
+                  onChange={handleChange}
+                  className="accent-blue-600"
+                />
 
-            <label className="font-semibold flex items-center gap-2 mb-3">
-              <Clock size={18} />
-              Select Time Slot
-            </label>
-
-            <div className="grid md:grid-cols-2 gap-4">
-
-              {timeSlots.map((slot) => (
-
-                <label
-                  key={slot}
-                  className="border rounded-xl p-4 cursor-pointer hover:border-[#0A2540]"
-                >
-
-                  <input
-                    type="radio"
-                    name="timeSlot"
-                    value={slot}
-                    checked={formData.timeSlot === slot}
-                    onChange={handleChange}
-                    className="mr-3"
-                  />
-
-                  {slot}
-
-                </label>
-
-              ))}
-
-            </div>
-
+                <Clock className="w-4 h-4 text-slate-400" />
+                <span className="text-sm">{slot}</span>
+              </label>
+            ))}
           </div>
+        </div>
 
-          {/* Previous Technician */}
+        {/* Upload Images */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Upload Images / Photos of Issue (Optional)
+          </label>
 
-          <div className="flex items-center gap-3">
+          <div className="relative border-2 border-dashed border-slate-300 p-6 rounded-lg text-center hover:border-blue-600 transition">
+            <Upload className="mx-auto text-slate-400 w-8 h-8 mb-2" />
 
             <input
-              type="checkbox"
-              name="requestPreviousTechnician"
-              checked={formData.requestPreviousTechnician}
+              type="file"
+              multiple
               onChange={handleChange}
-              className="w-5 h-5"
+              className="absolute inset-0 opacity-0 cursor-pointer"
             />
 
-            <label className="font-medium">
-              Request my previous service provider (if available)
-            </label>
-
+            <p className="text-sm text-slate-600">
+              Click or drag files to upload
+            </p>
           </div>
+        </div>
 
-          {/* Notes */}
+        {/* Request Previous Technician */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            name="requestPreviousTechnician"
+            id="previousTech"
+            checked={formData.requestPreviousTechnician}
+            onChange={handleChange}
+            className="w-4 h-4 accent-blue-600"
+          />
 
-          <div>
+          <label htmlFor="previousTech" className="text-sm text-slate-700 font-medium">
+            Request Previous Technician if Available
+          </label>
+        </div>
 
-            <label className="font-semibold mb-2 block">
-              Additional Notes (Optional)
-            </label>
+        {/* Special Instructions */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Special Instructions / Gate Code / Notes
+          </label>
 
-            <textarea
-              rows={4}
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              className="w-full border rounded-xl p-4"
-              placeholder="Any additional information..."
-            />
+          <input
+            type="text"
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Gate code, parking notes, etc."
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
+          />
+        </div>
 
-          </div>
+        {/* Submit */}
+        <button
+          type="submit"
+          className="w-full bg-[#0A2540] hover:bg-blue-900 text-white font-semibold py-3 rounded-lg transition"
+        >
+          Confirm Booking
+        </button>
 
-          {/* Submit */}
+      </form>
+    </div>
+  );
+}
 
-          <button
-            type="submit"
-            className="w-full bg-[#0A2540] text-white py-4 rounded-xl text-lg font-semibold hover:bg-[#12395f]"
-          >
-            Confirm Booking
-          </button>
-
-        </form>
-
-      </div>
-    </main>
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
+      <BookingPageContent />
+    </Suspense>
   );
 }

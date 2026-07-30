@@ -9,6 +9,7 @@ import TechDashboard from '../../components/technician/TechDashboard';
 import TechJobList from '../../components/technician/TechJobList';
 import TechJobDetail from '../../components/technician/TechJobDetail';
 import TechProfile from '../../components/technician/TechProfile';
+import TechPerformance from '../../components/technician/TechPerformance';
 import TechEmergencyModal from '../../components/technician/TechEmergencyModal';
 import TechExtraChargesModal from '../../components/technician/TechExtraChargesModal';
 import TechDelayModal from '../../components/technician/TechDelayModal';
@@ -455,11 +456,9 @@ export default function TechnicianModulePage() {
               )}
 
               {activeTab === 'performance' && (
-                <TechProfile 
-                  availability={availability}
-                  onToggleAvailability={handleToggleAvailability}
+                <TechPerformance 
+                  jobs={jobs}
                   currentUser={currentUser}
-                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
                 />
               )}
 
