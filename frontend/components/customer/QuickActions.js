@@ -12,7 +12,7 @@ export default function QuickActions() {
       description: 'Schedule a repair service',
       icon: CalendarPlus,
       color: 'bg-blue-100 text-blue-600',
-      path: '/customer/services',
+      path: '/customer/servlist',
     },
     {
       title: 'Track Requests',

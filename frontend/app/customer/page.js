@@ -4,7 +4,6 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import CustomerHeader from '../../components/customer/CustomerHeader';
 import WelcomeBanner from '../../components/customer/WelcomeBanner';
 import QuickActions from '../../components/customer/QuickActions';
-import ServiceGrid from '../../components/customer/ServiceGrid';
 import ActiveBookings from '../../components/customer/ActiveBookings';
 import BookingHistory from '../../components/customer/BookingHistory';
 import EmergencyBanner from '../../components/customer/EmergencyBanner';
@@ -21,19 +20,6 @@ export default function CustomerDashboard() {
 
         <QuickActions />
 
-        <section>
-          <div className="mb-5">
-            <h2 className="text-2xl font-bold text-[#0A2540]">
-              Our Services
-            </h2>
-
-            <p className="text-slate-600 mt-1">
-              Choose a service category to book a technician.
-            </p>
-          </div>
-
-          <ServiceGrid />
-        </section>
 
         <section>
           <div className="mb-5">
