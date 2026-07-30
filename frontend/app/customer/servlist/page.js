@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Zap,
   Wrench,
@@ -14,6 +14,8 @@ import {
 
 export default function ServList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+const emergency = searchParams.get("emergency");
 
   const services = [
     {
@@ -54,10 +56,12 @@ export default function ServList() {
   ];
 
   const handleCategory = (category) => {
-    router.push(
-      `/customer/services?category=${encodeURIComponent(category)}`
-    );
-  };
+  const url = emergency === "true"
+    ? `/customer/services?category=${encodeURIComponent(category)}&emergency=true`
+    : `/customer/services?category=${encodeURIComponent(category)}`;
+
+  router.push(url);
+};
 
   return (
     <main className="min-h-screen bg-slate-50">

@@ -1,29 +1,83 @@
 'use client';
 
-import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Calendar,
   Clock,
-  Upload,
   FileText,
   Wrench,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
+import { auth, db } from '../../../../lib/firebase/firebase';
+
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  limit,
+} from 'firebase/firestore';
+
 export default function BookingPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const emergency = searchParams.get("emergency");
+  const [formData, setFormData] = useState({
+  description: "",
+  date: "",
+  timeSlot: "",
+  requestPreviousTechnician: false,
+  isEmergency: false,
+  notes: "",
+});
+useEffect(() => {
+  if (emergency === "true") {
+    setFormData((prev) => ({
+      ...prev,
+      isEmergency: true,
+    }));
+  }
+}, [emergency]);
 
   const category = searchParams.get('category');
   const service = searchParams.get('service');
+  const price = searchParams.get('price');
+  const duration = searchParams.get('duration');
 
-  const [formData, setFormData] = useState({
-    description: '',
-    date: '',
-    timeSlot: '',
-    images: [],
-    requestPreviousTechnician: false,
-    notes: '',
-  });
+  const [loading, setLoading] = useState(false);
+  const [hasPreviousTechnician, setHasPreviousTechnician] = useState(false);
+
+ useEffect(() => {
+  const checkPreviousTechnician = async () => {
+    const user = auth.currentUser;
+
+    if (!user || !category) return;
+
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("customerId", "==", user.uid),
+        where("category", "==", category),
+        where("status", "==", "Completed"),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(q);
+
+      setHasPreviousTechnician(!snapshot.empty);
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  checkPreviousTechnician();
+}, [category]);
 
   const timeSlots = [
     '09:00 AM - 11:00 AM',
@@ -33,41 +87,95 @@ export default function BookingPage() {
   ];
 
   const handleChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+    const { name, value, type, checked } = e.target;
 
-    if (type === 'checkbox') {
-      setFormData({
-        ...formData,
-        [name]: checked,
-      });
-    } else if (type === 'file') {
-      setFormData({
-        ...formData,
-        images: Array.from(files),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log({
-      category,
-      service,
-      ...formData,
-    });
+    const user = auth.currentUser;
 
-    alert('Booking Submitted Successfully!');
+    if (!user) {
+      alert('Please login again.');
+      return;
+    }
+
+   if (!formData.isEmergency) {
+  if (!formData.date) {
+    alert("Please select a preferred date.");
+    return;
+  }
+
+  if (!formData.timeSlot) {
+    alert("Please select a time slot.");
+    return;
+  }
+}
+
+    setLoading(true);
+
+    try {
+      const bookingData = {
+        customerId: user.uid,
+        customerName: user.displayName || '',
+        customerEmail: user.email,
+
+        category,
+        service,
+        price,
+        duration,
+
+        description: formData.description,
+        date: formData.isEmergency ? null : formData.date,
+timeSlot: formData.isEmergency ? null : formData.timeSlot,
+
+        requestPreviousTechnician:
+          formData.requestPreviousTechnician,
+
+        isEmergency: formData.isEmergency,
+
+        notes: formData.notes,
+
+        status: formData.isEmergency
+          ? 'Emergency Pending'
+          : 'Pending',
+
+        technicianId: null,
+        dispatcherId: null,
+
+        createdAt: serverTimestamp(),
+      };
+
+      if (formData.isEmergency) {
+        await addDoc(
+          collection(db, 'emergencyBookings'),
+          bookingData
+        );
+      } else {
+        await addDoc(
+          collection(db, 'bookings'),
+          bookingData
+        );
+      }
+
+      alert('Booking submitted successfully.');
+
+      router.push('/customer/bookings');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to submit booking.');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  return (
+    return (
     <main className="min-h-screen bg-slate-50 py-10">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
 
         <h1 className="text-3xl font-bold text-[#0A2540] mb-8">
           Book Service
@@ -75,16 +183,37 @@ export default function BookingPage() {
 
         {/* Service Details */}
 
-        <div className="bg-slate-100 rounded-xl p-5 mb-8">
+        <div className="bg-slate-100 rounded-xl p-6 mb-8">
 
-          <h2 className="font-bold text-lg text-[#0A2540] flex items-center gap-2">
-            <Wrench size={20} />
+          <h2 className="text-xl font-bold flex items-center gap-2 text-[#0A2540]">
+            <Wrench size={22} />
             Service Details
           </h2>
 
-          <div className="mt-4 space-y-2">
-            <p><strong>Category:</strong> {category}</p>
-            <p><strong>Service:</strong> {service}</p>
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+
+            <div>
+              <p className="text-gray-500">Category</p>
+              <p className="font-semibold">{category}</p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Service</p>
+              <p className="font-semibold">{service}</p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Estimated Price</p>
+              <p className="font-semibold text-green-600">
+                ₹{price}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Estimated Duration</p>
+              <p className="font-semibold">{duration}</p>
+            </div>
+
           </div>
 
         </div>
@@ -108,142 +237,190 @@ export default function BookingPage() {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Describe the issue..."
+              placeholder="Describe the issue in detail..."
+              required
               className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
-              required
             />
 
           </div>
 
-          {/* Upload Images */}
+          {/* Preferred Date */}
 
-          <div>
+          {!formData.isEmergency && (
+  <div>
 
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <Upload size={18} />
-              Upload Images
-            </label>
+    <label className="font-semibold flex items-center gap-2 mb-2">
+      <Calendar size={18} />
+      Preferred Date
+    </label>
 
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleChange}
-              className="w-full border rounded-xl p-3"
-            />
+    <input
+      type="date"
+      name="date"
+      value={formData.date}
+      onChange={handleChange}
+      required
+      className="w-full border rounded-xl p-3"
+    />
 
-            <p className="text-sm text-slate-500 mt-2">
-              Upload up to 5 images.
-            </p>
-
-          </div>
-
-          {/* Date */}
-
-          <div>
-
-            <label className="font-semibold flex items-center gap-2 mb-2">
-              <Calendar size={18} />
-              Preferred Date
-            </label>
-
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full border rounded-xl p-3"
-              required
-            />
-
-          </div>
+  </div>
+)}
 
           {/* Time Slots */}
 
-          <div>
+          {!formData.isEmergency && (
+  <div>
 
-            <label className="font-semibold flex items-center gap-2 mb-3">
-              <Clock size={18} />
-              Select Time Slot
-            </label>
+    <label className="font-semibold flex items-center gap-2 mb-3">
+      <Clock size={18} />
+      Select Time Slot
+    </label>
 
-            <div className="grid md:grid-cols-2 gap-4">
+    <div className="grid md:grid-cols-2 gap-4">
 
-              {timeSlots.map((slot) => (
+      {timeSlots.map((slot) => (
 
-                <label
-                  key={slot}
-                  className="border rounded-xl p-4 cursor-pointer hover:border-[#0A2540]"
-                >
+        <label
+          key={slot}
+          className={`border rounded-xl p-4 cursor-pointer transition ${
+            formData.timeSlot === slot
+              ? "border-[#0A2540] bg-blue-50"
+              : "hover:border-[#0A2540]"
+          }`}
+        >
 
-                  <input
-                    type="radio"
-                    name="timeSlot"
-                    value={slot}
-                    checked={formData.timeSlot === slot}
-                    onChange={handleChange}
-                    className="mr-3"
+          <input
+            type="radio"
+            name="timeSlot"
+            value={slot}
+            checked={formData.timeSlot === slot}
+            onChange={handleChange}
+            className="mr-3"
+          />
+
+          {slot}
+
+        </label>
+
+      ))}
+
+    </div>
+
+  </div>
+)}
+        
+                    {/* Request Previous Technician */}
+
+          {hasPreviousTechnician && (
+  <div className="border rounded-xl p-5">
+
+    <div className="flex items-start gap-3">
+
+      <input
+        type="checkbox"
+        name="requestPreviousTechnician"
+        checked={formData.requestPreviousTechnician}
+        onChange={handleChange}
+        className="mt-1 w-5 h-5 accent-[#0A2540]"
+      />
+
+      <div>
+
+        <label className="font-semibold text-[#0A2540]">
+          Request Previous Technician
+        </label>
+
+        <p className="text-sm text-gray-500 mt-1">
+          We'll try to assign the technician who previously worked on your
+          {` ${category}`} service.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
+{!hasPreviousTechnician && (
+  <div className="border rounded-xl p-5 bg-gray-50">
+
+    <p className="text-gray-600 text-sm">
+      Previous technician requests become available after you complete at least
+      one <strong>{category}</strong> service.
+    </p>
+
+  </div>
+)}
+
+          {/* Emergency Service */}
+
+          <div className="border border-red-300 bg-red-50 rounded-xl p-5">
+
+            <div className="flex items-start gap-3">
+
+              <input
+  type="checkbox"
+  name="isEmergency"
+  checked={formData.isEmergency}
+  onChange={handleChange}
+  disabled={emergency === "true"}
+  className="mt-1 w-5 h-5 accent-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+/>
+
+              <div>
+
+                <div className="flex items-center gap-2">
+
+                  <AlertTriangle
+                    size={20}
+                    className="text-red-600"
                   />
 
-                  {slot}
+                  <label className="font-semibold text-red-700">
+                    Emergency Service
+                  </label>
 
-                </label>
+                </div>
 
-              ))}
+                <p className="text-sm text-red-600 mt-2">
+                  Emergency requests are immediately forwarded to the
+                  dispatcher for faster assignment.
+                </p>
+
+              </div>
 
             </div>
 
           </div>
 
-          {/* Previous Technician */}
+          
 
-          <div className="flex items-center gap-3">
-
-            <input
-              type="checkbox"
-              name="requestPreviousTechnician"
-              checked={formData.requestPreviousTechnician}
-              onChange={handleChange}
-              className="w-5 h-5"
-            />
-
-            <label className="font-medium">
-              Request my previous service provider (if available)
-            </label>
-
-          </div>
-
-          {/* Notes */}
-
-          <div>
-
-            <label className="font-semibold mb-2 block">
-              Additional Notes (Optional)
-            </label>
-
-            <textarea
-              rows={4}
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              className="w-full border rounded-xl p-4"
-              placeholder="Any additional information..."
-            />
-
-          </div>
-
-          {/* Submit */}
+          {/* Submit Button */}
 
           <button
             type="submit"
-            className="w-full bg-[#0A2540] text-white py-4 rounded-xl text-lg font-semibold hover:bg-[#12395f]"
+            disabled={loading}
+            className="w-full bg-[#0A2540] hover:bg-[#163B63] text-white py-4 rounded-xl font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-3"
           >
-            Confirm Booking
+
+            {loading ? (
+              <>
+                <Loader2
+                  className="animate-spin"
+                  size={20}
+                />
+                Submitting Booking...
+              </>
+            ) : (
+              'Confirm Booking'
+            )}
+
           </button>
 
         </form>
 
       </div>
+
     </main>
   );
 }
