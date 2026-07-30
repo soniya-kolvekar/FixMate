@@ -32,6 +32,7 @@ export default function DispatcherDashboard() {
         showToast={state.showToast}
         staggeredMenuItems={state.staggeredMenuItems}
         socialItems={state.socialItems}
+        notifications={state.notifications}
       />
 
       {/* Main Dashboard Body */}
@@ -47,6 +48,7 @@ export default function DispatcherDashboard() {
             handleOpenAssign={state.handleOpenAssign}
             setIsMapExpanded={state.setIsMapExpanded}
             showToast={state.showToast}
+            emergencyRequests={state.emergencyRequests}
           />
         )}
 
@@ -129,6 +131,7 @@ export default function DispatcherDashboard() {
         dispatches={state.dispatches}
         handleOpenAssign={state.handleOpenAssign}
         showToast={state.showToast}
+        liveTechnicians={state.liveTechnicians}
       />
 
     </div>
