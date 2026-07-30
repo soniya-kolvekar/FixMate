@@ -37,8 +37,8 @@ export default function TechProfile({
     email: currentUser?.email || 'rajesh.kumar@fixmate.in',
     specialization: currentUser?.specialization || 'Master Plumber',
     experienceYears: currentUser?.experienceYears || '8',
-    workingArea: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
-    avatarUrl: currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    workingArea: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
+    avatarUrl: currentUser?.avatarUrl || '',
     availability: availability || 'Available'
   });
 
@@ -74,7 +74,7 @@ export default function TechProfile({
             email: user?.email || currentUser?.email || 'rajesh.kumar@fixmate.in',
             specialization: currentUser?.specialization || 'Master Plumber',
             experienceYears: currentUser?.experienceYears || '8',
-            workingArea: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+            workingArea: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
             avatarUrl: currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
             availability: availability || 'Available',
             role: 'technician',

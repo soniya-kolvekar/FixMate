@@ -23,7 +23,11 @@ export default function TechnicianModulePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Authentication & Technician Profile State (Issues #1, #2, #14)
+  // Single Dispatcher & Admin Scope for Mangaluru, Karnataka
+  const DISPATCHER_EMAIL = 'dispatcher@fixmate.com';
+  const MANGALURU_REGION = 'Mangaluru, Karnataka';
+
+  // Authentication & Technician Profile State (Mangaluru Region Focus)
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
   const [currentUser, setCurrentUser] = useState({
     name: 'Rajesh Kumar',
@@ -31,7 +35,7 @@ export default function TechnicianModulePage() {
     phone: '+91 98765 43210',
     specialization: 'Master Plumber',
     experienceYears: '8',
-    workingArea: 'Indiranagar & HSR, Bengaluru',
+    workingArea: 'Kodialbail & Hampankatta, Mangaluru',
     status: 'Available'
   });
 
@@ -52,7 +56,7 @@ export default function TechnicianModulePage() {
               phone: data.phone || data.mobile || prev.phone,
               specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
               experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
-              workingArea: data.workingArea || data.serviceArea || prev.workingArea,
+              workingArea: data.workingArea || data.serviceArea || 'Kodialbail & Hampankatta, Mangaluru',
               avatarUrl: data.avatarUrl || prev.avatarUrl
             }));
           }
@@ -66,7 +70,7 @@ export default function TechnicianModulePage() {
     };
   }, []);
 
-  // Daily Workload Capacity Rule (Issue #10: Max 6 assigned jobs per day)
+  // Daily Workload Capacity Rule (Max 6 assigned jobs per day)
   const MAX_DAILY_CAPACITY = 6;
 
   // Modals state
@@ -74,14 +78,14 @@ export default function TechnicianModulePage() {
   const [extraChargesModalOpen, setExtraChargesModalOpen] = useState(false);
   const [delayModalOpen, setDelayModalOpen] = useState(false);
 
-  // Mock initial jobs list
+  // Mock initial jobs list (Tailored for Mangaluru, Karnataka)
   const [jobs, setJobs] = useState([
     {
       id: 'FM-9841',
       title: 'Plumbing Repair & Leak Fixing',
       tag: 'PREMIUM',
       time: '09:30 AM',
-      location: '104 Indiranagar 10th Main, Bengaluru',
+      location: '104 MG Road, Kodialbail, Mangaluru',
       customerName: 'Priya Sharma',
       customerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
       customerPhone: '+91 98123 45678',
@@ -97,7 +101,7 @@ export default function TechnicianModulePage() {
       title: 'Geyser & Water Heater Flush',
       tag: 'REPAIR',
       time: '11:00 AM',
-      location: '742 Bandra West, Mumbai',
+      location: '742 Hampankatta Main Rd, Mangaluru',
       customerName: 'Aarav Mehta',
       customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
       customerPhone: '+91 98234 56789',
@@ -113,7 +117,7 @@ export default function TechnicianModulePage() {
       title: 'Kitchen Tap Sensor Replacement',
       tag: 'INSTALL',
       time: '02:00 PM',
-      location: '88 Connaught Place, New Delhi',
+      location: '88 Bejai Main Road, Mangaluru',
       customerName: 'Ananya Reddy',
       customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
       customerPhone: '+91 98345 67890',
@@ -129,7 +133,7 @@ export default function TechnicianModulePage() {
       title: 'Bathroom Pipe Anti-Clog Sanitation',
       tag: 'MAINTENANCE',
       time: '04:30 PM',
-      location: '482 HSR Layout Sector 3, Bengaluru',
+      location: '482 Kadri Hills, Mangaluru',
       customerName: 'Vikram Malhotra',
       customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
       customerPhone: '+91 98456 78901',
@@ -142,13 +146,13 @@ export default function TechnicianModulePage() {
     }
   ]);
 
-  // Notifications state (Issue #13)
+  // Notifications state (Mangaluru Region Focus)
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Job Assigned', message: 'You have been assigned #FM-9844 in HSR Layout', time: '10 mins ago' },
-    { id: 2, title: 'Dispatcher Broadcast', message: 'High service demand in Indiranagar Sector', time: '45 mins ago' }
+    { id: 1, title: 'New Job Assigned', message: 'Assigned #FM-9844 in Kadri Hills, Mangaluru', time: '10 mins ago' },
+    { id: 2, title: 'Dispatcher Broadcast', message: 'High service demand in Kodialbail Sector, Mangaluru', time: '45 mins ago' }
   ]);
 
-  // Mock Emergency Job data (Issues #5, #6)
+  // Mock Emergency Job data (Mangaluru Region)
   const mockEmergencyJob = {
     id: 'EMG-9021',
     title: 'Burst Main Pipe & Floor Flooding',
@@ -156,17 +160,14 @@ export default function TechnicianModulePage() {
     distance: '1.2 km away',
     travelTime: '8 mins',
     customerNote: 'Water leaking heavily through living room ceiling. Need immediate main valve shutoff and repair.',
-    location: '147 Jubilee Hills Road No. 36, Hyderabad',
+    location: '147 Surathkal Beach Road, Mangaluru',
     customerName: 'Rohan Verma',
-    customerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    customerPhone: '+91 98567 89012',
+    customerPhone: '+91 98999 88877',
     price: 1499.00,
-    status: 'Accepted',
-    tag: 'EMERGENCY',
-    time: 'IMMEDIATE',
     isEmergency: true
   };
 
+  // Toast notification helper
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -196,14 +197,13 @@ export default function TechnicianModulePage() {
       email: currentUser?.email || 'rajesh.kumar@fixmate.in',
       specialization: currentUser?.specialization || 'Master Plumber',
       specialty: currentUser?.specialization || 'Plumbing',
-      workingArea: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
-      zone: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+      workingArea: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
+      zone: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
       availability: nextStatus,
-      status: nextStatus, // Available | Busy | Offline
+      status: nextStatus,
       updatedAt: new Date().toISOString()
     };
 
-    // 1. Update Firebase Firestore in real-time for both technicians & users collections
     try {
       await setDoc(doc(db, 'technicians', techUid), techPayload, { merge: true });
       await setDoc(doc(db, 'users', techUid), techPayload, { merge: true });
@@ -211,34 +211,31 @@ export default function TechnicianModulePage() {
       console.warn('Firestore availability update error:', err);
     }
 
-    // 2. Sync to Backend API
     fetch(`http://localhost:5000/api/technicians/${techUid}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: nextStatus, availability: nextStatus })
     }).catch(err => console.warn('Express API status update error:', err));
 
-    // 3. LocalStorage & Window Custom Event broadcast
     try {
       localStorage.setItem(`fixmate_tech_availability_${techUid}`, nextStatus);
       window.dispatchEvent(new CustomEvent('fixmate_tech_status_updated', { detail: techPayload }));
     } catch(e) {}
 
-    showToast(`🟢 Real-Time Duty Status: Updated to "${nextStatus}" (Synced with Dispatcher)`);
+    showToast(`🟢 Duty Status: Updated to "${nextStatus}" (Synced with ${DISPATCHER_EMAIL})`);
   };
 
-  // Checklist Progression Handler (Issue #7 & #8)
+  // Checklist Progression Handler
   const handleUpdateStatus = (jobId, nextStatus) => {
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: nextStatus } : j));
     if (selectedJob && selectedJob.id === jobId) {
       setSelectedJob(prev => ({ ...prev, status: nextStatus }));
     }
     
-    // Auto add live notification (Issue #13)
     const newNotif = {
       id: Date.now(),
       title: 'Status Synchronized',
-      message: `Job #${jobId} status updated to "${nextStatus}". Synced with Dispatcher.`,
+      message: `Job #${jobId} status updated to "${nextStatus}". Synced with ${DISPATCHER_EMAIL}.`,
       time: 'Just now'
     };
     setNotifications(prev => [newNotif, ...prev]);
@@ -246,40 +243,30 @@ export default function TechnicianModulePage() {
     showToast(`✅ Job #${jobId} status updated to "${nextStatus}"`);
   };
 
-  // Emergency Acceptance Handler (Issues #5, #6)
+  // Emergency Acceptance Handler
   const handleAcceptEmergency = (emgJob) => {
-    const activeCount = jobs.filter(j => j.status !== 'Completed').length;
+    const activeCount = jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled').length;
+
     if (activeCount >= MAX_DAILY_CAPACITY) {
-      showToast(`⚠️ Daily capacity limit of ${MAX_DAILY_CAPACITY} jobs reached! Cannot accept more jobs today.`);
-      setEmergencyModalOpen(false);
+      alert(`⚠️ Daily Capacity Limit Reached (${MAX_DAILY_CAPACITY} Jobs Max). Finish or complete existing jobs first!`);
       return;
     }
 
-    setJobs(prev => [emgJob, ...prev]);
-    setEmergencyModalOpen(false);
-    setSelectedJob(emgJob);
-    
-    // Synchronize removal from Dispatcher Urgent Broadcast list
-    try {
-      fetch(`http://localhost:5000/api/dispatches/${emgJob.id}`, { method: 'DELETE' }).catch(() => {});
-      const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-      const updated = local.filter(d => d.id !== emgJob.id && d.title !== emgJob.title);
-      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
-      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
-    } catch (e) {}
-
-    const notif = {
-      id: Date.now(),
-      title: 'Emergency Job Locked',
-      message: `Accepted & locked emergency assignment #${emgJob.id}!`,
-      time: 'Just now'
+    const newJob = {
+      ...emgJob,
+      status: 'Accepted',
+      extraCharges: 0,
+      extraChargesReason: '',
+      time: 'Immediate'
     };
-    setNotifications(prev => [notif, ...prev]);
 
-    showToast(`🚨 Emergency Job #${emgJob.id} accepted! Locked to your account.`);
+    setJobs(prev => [newJob, ...prev]);
+    setEmergencyModalOpen(false);
+    setSelectedJob(newJob);
+    showToast(`🚨 Emergency Job #${emgJob.id} accepted! Transmitted to ${DISPATCHER_EMAIL}.`);
   };
 
-  // Extra Charges Handler (Issue #9)
+  // Extra Charges Handler
   const handleAddExtraCharges = (jobId, amount, reason) => {
     setJobs(prev => prev.map(j => {
       if (j.id === jobId) {
@@ -303,7 +290,7 @@ export default function TechnicianModulePage() {
     showToast(`+₹${amount.toFixed(2)} extra charges added to #${jobId} with justification.`);
   };
 
-  // Delay & Cancellation Report Handler (Issue #12)
+  // Delay & Cancellation Report Handler
   const handleReportDelay = async (jobId, reasonType, notes) => {
     const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
     const isCancellation = reasonType === 'Cancel Assignment';
@@ -314,7 +301,7 @@ export default function TechnicianModulePage() {
       jobId: jobId,
       title: `${isCancellation ? '🚨 MID-SERVICE CANCELLATION REQUEST' : '⚠️ TECHNICIAN DELAY ALERT'} - #${jobId}`,
       time: 'Just now',
-      address: targetJob?.location || 'Indiranagar 10th Main, Bengaluru',
+      address: targetJob?.location || '104 MG Road, Kodialbail, Mangaluru',
       priority: isCancellation ? 'Priority Level 10' : 'Priority Level 8',
       category: isCancellation ? 'CANCELLATION' : 'DELAY',
       type: 'URGENT',
@@ -325,14 +312,14 @@ export default function TechnicianModulePage() {
       customerPhone: targetJob?.customerPhone || '',
       technicianName: currentUser?.name || 'Rajesh Kumar',
       technicianPhone: currentUser?.phone || '+91 98765 43210',
-      targetDispatcher: 'dispatcher@fixmate.com',
+      targetDispatcher: DISPATCHER_EMAIL,
+      region: MANGALURU_REGION,
       reasonType: reasonType,
-      notes: notes || 'Technician reported incident during active duty.',
+      notes: notes || 'Technician reported incident during active duty in Mangaluru region.',
       price: targetJob?.price ? `${targetJob.price.toFixed(2)}` : '499.00',
       createdAt: new Date().toISOString()
     };
 
-    // 1. Save to Firebase Firestore (dispatches & dispatcher_alerts collections)
     try {
       await setDoc(doc(db, 'dispatches', alertId), alertItem, { merge: true });
       await setDoc(doc(db, 'dispatcher_alerts', alertId), alertItem, { merge: true });
@@ -340,21 +327,18 @@ export default function TechnicianModulePage() {
       console.warn('Firestore write warning:', err);
     }
 
-    // 2. Post to Express Backend API
     fetch('http://localhost:5000/api/dispatches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(alertItem)
     }).catch(err => console.warn('Express API dispatch warning:', err));
 
-    // 3. Sync to LocalStorage & trigger local window event
     try {
       const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
       localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([alertItem, ...localData]));
       window.dispatchEvent(new Event('fixmate_dispatch_updated'));
     } catch(e) {}
 
-    // 4. Update local job status if cancellation requested
     if (isCancellation) {
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'Cancelled' } : j));
       if (selectedJob && selectedJob.id === jobId) {
@@ -362,10 +346,10 @@ export default function TechnicianModulePage() {
       }
     }
 
-    showToast(`🚨 Urgent alert dynamically sent to dispatcher@fixmate.com for #${jobId}: "${reasonType}"`);
+    showToast(`🚨 Urgent alert sent to ${DISPATCHER_EMAIL} (Mangaluru) for #${jobId}: "${reasonType}"`);
   };
 
-  // Auth Handler (Issues #1, #2)
+  // Auth Handler
   const handleAuthSuccess = (userData, message) => {
     setCurrentUser(userData);
     showToast(message);
@@ -374,12 +358,12 @@ export default function TechnicianModulePage() {
   const getPageTitle = () => {
     if (selectedJob) return `Job Details: #${selectedJob.id}`;
     switch (activeTab) {
-      case 'dashboard': return 'Technician Command Dashboard';
-      case 'jobs': return 'Assigned Jobs Hub';
-      case 'emergency': return 'Emergency Request Broadcasts';
+      case 'dashboard': return 'Technician Hub — Mangaluru Region';
+      case 'jobs': return 'Assigned Jobs Hub (Mangaluru)';
+      case 'emergency': return 'Emergency Requests (Mangaluru)';
       case 'performance': return 'Performance & Analytics';
       case 'profile': return 'Technician Profile & Settings';
-      default: return 'Technician Portal';
+      default: return 'Technician Portal — Mangaluru';
     }
   };
 
@@ -387,7 +371,7 @@ export default function TechnicianModulePage() {
     <ProtectedRoute allowedRole="technician">
       <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
         
-        {/* Full-width Sticky Header with StaggeredMenu Overlay & ProtectedRoute */}
+        {/* Full-width Sticky Header with StaggeredMenu Overlay */}
         <TechHeader 
           title={getPageTitle()}
           availability={availability}
@@ -438,8 +422,8 @@ export default function TechnicianModulePage() {
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
-                      <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
+                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts — Mangaluru</h3>
+                      <p className="text-xs text-slate-500 font-medium">Real-time emergency calls assigned by Mangaluru Dispatcher ({DISPATCHER_EMAIL})</p>
                     </div>
                     <button 
                       onClick={() => setEmergencyModalOpen(true)}
@@ -478,15 +462,15 @@ export default function TechnicianModulePage() {
         <TechAuthModal 
           isOpen={authModal.isOpen}
           mode={authModal.mode}
-          onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
+          onClose={() => setAuthModal({ ...authModal, isOpen: false })}
           onAuthSuccess={handleAuthSuccess}
         />
 
         <TechEmergencyModal 
           isOpen={emergencyModalOpen}
           emergencyJob={mockEmergencyJob}
-          onAccept={handleAcceptEmergency}
-          onDecline={() => setEmergencyModalOpen(false)}
+          onClose={() => setEmergencyModalOpen(false)}
+          onAcceptEmergency={handleAcceptEmergency}
         />
 
         <TechExtraChargesModal 
@@ -503,10 +487,10 @@ export default function TechnicianModulePage() {
           onReportDelay={handleReportDelay}
         />
 
-        {/* Toast Notification Popup */}
+        {/* Floating Toast Notice */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold animate-in slide-in-from-bottom duration-300 border border-white/10">
-            <Info className="w-5 h-5 text-blue-400 shrink-0" />
+          <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold border border-blue-400/30 animate-in slide-in-from-bottom duration-300">
+            <Info className="w-4 h-4 text-blue-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
