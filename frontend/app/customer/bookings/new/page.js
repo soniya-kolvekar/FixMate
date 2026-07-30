@@ -95,7 +95,7 @@ useEffect(() => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const user = auth.currentUser;
@@ -232,7 +232,7 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
           </label>
 
           <div className="relative">
-            <FileText className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
+            <FileText className="absolute top-3 left-2 text-slate-400 w-3 h-5" />
 
             <textarea
               name="description"
@@ -240,10 +240,11 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
               required
               value={formData.description}
               onChange={handleChange}
-              placeholder="Describe the issue in detail..."
+              placeholder="     Describe the issue in detail..."
               required
               className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
             />
+          </div>
           </div>
 
           {/* Preferred Date */}
