@@ -13,10 +13,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-function ServListContent() {
+export default function ServList() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const emergency = searchParams.get("emergency");
+const emergency = searchParams.get("emergency");
 
   const services = [
     {
@@ -26,38 +26,45 @@ function ServListContent() {
     },
     {
       title: 'Plumbing',
-      description: 'Leaking pipes, tap installations, drain cleaning and plumbing fixes.',
+      description: 'Leak repairs, tap installation, pipe maintenance and bathroom fittings.',
       icon: Wrench,
     },
     {
-      title: 'AC Service',
-      description: 'AC installation, filter cleaning, gas filling and cooling repair.',
+      title: 'AC Repair',
+      description: 'AC servicing, installation, gas refilling and cooling issue repairs.',
       icon: Wind,
     },
     {
       title: 'Appliance Repair',
-      description: 'Washing machine, refrigerator, microwave and other appliance fixing.',
+      description: 'Repair services for TVs, Refrigerators, Washing Machines and Microwaves.',
       icon: Refrigerator,
     },
     {
       title: 'Carpentry',
-      description: 'Furniture assembly, door adjustments, custom woodwork and repairs.',
+      description: 'Furniture assembly, door repair, shelf installation and woodwork.',
       icon: Hammer,
     },
     {
       title: 'Painting',
-      description: 'Complete home painting, wall touching, wall decoration and coloring.',
+      description: 'Interior, exterior, texture and ceiling painting services.',
       icon: Paintbrush,
     },
+    {
+      title: 'Cleaning',
+      description: 'Deep home, kitchen, bathroom and sofa cleaning by professionals.',
+      icon: Sparkles,
+    }
   ];
 
   const handleCategory = (categoryName) => {
-    if (emergency) {
-      router.push(`/customer/emergency?category=${encodeURIComponent(categoryName)}`);
-    } else {
-      router.push(`/customer/bookings/new?category=${encodeURIComponent(categoryName)}`);
-    }
-  };
+  let url = `/customer/services?category=${encodeURIComponent(categoryName)}`;
+
+  if (emergency === "true") {
+    url += "&emergency=true";
+  }
+
+  router.push(url);
+};
 
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-6">
@@ -116,13 +123,4 @@ function ServListContent() {
 
       </div>
     </main>
-  );
-}
-
-export default function ServList() {
-  return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-10 text-slate-500 font-bold">Loading services...</div>}>
-      <ServListContent />
-    </Suspense>
-  );
-}
+  );}

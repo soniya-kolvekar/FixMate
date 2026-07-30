@@ -14,7 +14,7 @@ export default function ServicesPage() {
   const services = serviceCategories[category] || [];
 
   const handleBooking = (service) => {
-    let url = `/customer/bookings/new?category=${encodeURIComponent(
+  let url = `/customer/bookings/new?category=${encodeURIComponent(
     category
   )}&service=${encodeURIComponent(service.name)}&price=${encodeURIComponent(
     service.price
@@ -26,6 +26,7 @@ export default function ServicesPage() {
 
   router.push(url);
 };
+
 
   return (
     <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading services catalog...</div>}>

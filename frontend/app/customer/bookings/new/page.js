@@ -23,7 +23,7 @@ import {
   limit,
 } from 'firebase/firestore';
 
-function BookingPageContent() {
+export default function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emergency = searchParams.get("emergency");
@@ -95,7 +95,6 @@ useEffect(() => {
     }));
   };
 
-  const handleSubmit = async (e) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -427,13 +426,5 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
 
     </main>
      </Suspense>
-  );
-}
-
-export default function BookingPage() {
-  return (
-    <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
-      <BookingPageContent />
-    </Suspense>
   );
 }
