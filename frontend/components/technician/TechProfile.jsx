@@ -141,55 +141,6 @@ export default function TechProfile({
   return (
     <div className="space-y-8 antialiased max-w-5xl mx-auto">
       
-      {/* Performance Dashboard Metrics Top Row */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-extrabold text-[#0A2540] font-heading">Technician Performance & Analytics Summary</h3>
-            <p className="text-xs text-slate-400 font-medium">Real-time stats compiled directly across your active Firebase account</p>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-black">
-            Top Tier Specialist
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Jobs Today</span>
-            <div className="text-xl font-black text-[#0A2540]">2 Completed</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Total Completed</span>
-            <div className="text-xl font-black text-emerald-600">142 Jobs</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Emergency Accepted</span>
-            <div className="text-xl font-black text-rose-600">18 Runs</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Avg Completion</span>
-            <div className="text-xl font-black text-blue-600">42 Mins</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Cancellations</span>
-            <div className="text-xl font-black text-slate-500">0 Jobs</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Overall Rating</span>
-            <div className="text-xl font-black text-amber-500 flex items-center justify-center gap-1">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> 4.92
-            </div>
-          </div>
-
-        </div>
-      </div>
-
       {/* Real-time Dynamic Profile Form */}
       <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm space-y-6 relative">
         

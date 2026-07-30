@@ -63,7 +63,7 @@ export default function TechDesktopSidebar({
             className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-[#0A2540] hover:bg-slate-100/70 transition-colors"
           >
             <Home className="w-4 h-4 text-slate-400" />
-            <span>Return to Main Site</span>
+            <span>Home</span>
           </Link>
         </div>
 
