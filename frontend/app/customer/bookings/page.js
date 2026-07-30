@@ -1,6 +1,6 @@
 'use client';
 import CustomerDashboard from '../page';
 
-export default function CustomerHistoryPage() {
+export default function CustomerBookingsPage() {
   return <CustomerDashboard />;
 }

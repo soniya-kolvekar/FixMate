@@ -16,6 +16,10 @@ export default function ProtectedRoute({
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        if (process.env.NODE_ENV === 'development') {
+          setLoading(false);
+          return;
+        }
         router.replace('/');
         return;
       }
@@ -25,6 +29,10 @@ export default function ProtectedRoute({
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
+          if (process.env.NODE_ENV === 'development') {
+            setLoading(false);
+            return;
+          }
           router.replace('/');
           return;
         }
@@ -32,6 +40,10 @@ export default function ProtectedRoute({
         const userData = docSnap.data();
 
         if (userData.role !== allowedRole) {
+          if (process.env.NODE_ENV === 'development') {
+            setLoading(false);
+            return;
+          }
           router.replace('/');
           return;
         }
@@ -39,6 +51,10 @@ export default function ProtectedRoute({
         setLoading(false);
       } catch (err) {
         console.error(err);
+        if (process.env.NODE_ENV === 'development') {
+          setLoading(false);
+          return;
+        }
         router.replace('/');
       }
     });

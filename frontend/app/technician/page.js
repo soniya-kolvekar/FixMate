@@ -1,5 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { auth, db } from '../../lib/firebase/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import TechHeader from '../../components/technician/TechHeader';
 import TechDashboard from '../../components/technician/TechDashboard';
 import TechJobList from '../../components/technician/TechJobList';
@@ -27,9 +31,39 @@ export default function TechnicianModulePage() {
     specialization: 'Master Plumber',
     experienceYears: '8',
     workingArea: 'Indiranagar & HSR, Bengaluru',
-    avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
     status: 'Available'
   });
+
+  // Real-time Firebase Sync for logged in Technician
+  useEffect(() => {
+    let unsubscribeDoc = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setCurrentUser(prev => ({
+              ...prev,
+              uid: user.uid,
+              name: data.name || data.fullName || user.displayName || prev.name,
+              email: data.email || user.email || prev.email,
+              phone: data.phone || data.mobile || prev.phone,
+              specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
+              experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
+              workingArea: data.workingArea || data.serviceArea || prev.workingArea,
+              avatarUrl: data.avatarUrl || prev.avatarUrl
+            }));
+          }
+        });
+      }
+    });
+
+    return () => {
+      if (unsubscribeDoc) unsubscribeDoc();
+      unsubscribeAuth();
+    };
+  }, []);
 
   // Daily Workload Capacity Rule (Issue #10: Max 6 assigned jobs per day)
   const MAX_DAILY_CAPACITY = 6;
@@ -139,17 +173,57 @@ export default function TechnicianModulePage() {
     }, 4000);
   };
 
-  // Availability Switcher (Issue #11)
-  const handleToggleAvailability = (forcedStatus) => {
+  // Availability Switcher with Firebase Firestore & Backend Sync
+  const handleToggleAvailability = async (forcedStatus) => {
+    let nextStatus = 'Available';
     if (typeof forcedStatus === 'string') {
-      const formatted = forcedStatus === 'ONLINE' ? 'Available' : forcedStatus === 'BUSY' ? 'Busy' : 'Offline';
-      setAvailability(formatted);
-      showToast(`Duty availability updated to: ${formatted}`);
+      nextStatus = (forcedStatus === 'ONLINE' || forcedStatus === 'Available') ? 'Available' : (forcedStatus === 'BUSY' || forcedStatus === 'Busy') ? 'Busy' : 'Offline';
     } else {
-      const next = availability === 'Available' ? 'Busy' : availability === 'Busy' ? 'Offline' : 'Available';
-      setAvailability(next);
-      showToast(`Duty availability updated to: ${next}`);
+      nextStatus = availability === 'Available' ? 'Busy' : availability === 'Busy' ? 'Offline' : 'Available';
     }
+
+    setAvailability(nextStatus);
+
+    const user = auth.currentUser;
+    const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+
+    const techPayload = {
+      id: techUid,
+      uid: techUid,
+      name: currentUser?.name || 'Rajesh Kumar',
+      phone: currentUser?.phone || '+91 98765 43210',
+      email: currentUser?.email || 'rajesh.kumar@fixmate.in',
+      specialization: currentUser?.specialization || 'Master Plumber',
+      specialty: currentUser?.specialization || 'Plumbing',
+      workingArea: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+      zone: currentUser?.workingArea || 'Indiranagar & HSR, Bengaluru',
+      availability: nextStatus,
+      status: nextStatus, // Available | Busy | Offline
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Update Firebase Firestore in real-time for both technicians & users collections
+    try {
+      await setDoc(doc(db, 'technicians', techUid), techPayload, { merge: true });
+      await setDoc(doc(db, 'users', techUid), techPayload, { merge: true });
+    } catch (err) {
+      console.warn('Firestore availability update error:', err);
+    }
+
+    // 2. Sync to Backend API
+    fetch(`http://localhost:5000/api/technicians/${techUid}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus, availability: nextStatus })
+    }).catch(err => console.warn('Express API status update error:', err));
+
+    // 3. LocalStorage & Window Custom Event broadcast
+    try {
+      localStorage.setItem(`fixmate_tech_availability_${techUid}`, nextStatus);
+      window.dispatchEvent(new CustomEvent('fixmate_tech_status_updated', { detail: techPayload }));
+    } catch(e) {}
+
+    showToast(`🟢 Real-Time Duty Status: Updated to "${nextStatus}" (Synced with Dispatcher)`);
   };
 
   // Checklist Progression Handler (Issue #7 & #8)
@@ -184,6 +258,15 @@ export default function TechnicianModulePage() {
     setEmergencyModalOpen(false);
     setSelectedJob(emgJob);
     
+    // Synchronize removal from Dispatcher Urgent Broadcast list
+    try {
+      fetch(`http://localhost:5000/api/dispatches/${emgJob.id}`, { method: 'DELETE' }).catch(() => {});
+      const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+      const updated = local.filter(d => d.id !== emgJob.id && d.title !== emgJob.title);
+      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+    } catch (e) {}
+
     const notif = {
       id: Date.now(),
       title: 'Emergency Job Locked',
@@ -220,8 +303,65 @@ export default function TechnicianModulePage() {
   };
 
   // Delay & Cancellation Report Handler (Issue #12)
-  const handleReportDelay = (jobId, reasonType, notes) => {
-    showToast(`🚨 Urgent alert sent to Dispatcher for #${jobId}: "${reasonType}"`);
+  const handleReportDelay = async (jobId, reasonType, notes) => {
+    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
+    const isCancellation = reasonType === 'Cancel Assignment';
+    
+    const alertId = `DISP-ALERT-${Date.now()}`;
+    const alertItem = {
+      id: alertId,
+      jobId: jobId,
+      title: `${isCancellation ? '🚨 MID-SERVICE CANCELLATION REQUEST' : '⚠️ TECHNICIAN DELAY ALERT'} - #${jobId}`,
+      time: 'Just now',
+      address: targetJob?.location || 'Indiranagar 10th Main, Bengaluru',
+      priority: isCancellation ? 'Priority Level 10' : 'Priority Level 8',
+      category: isCancellation ? 'CANCELLATION' : 'DELAY',
+      type: 'URGENT',
+      icon: isCancellation ? '🚫' : '🚗',
+      colorClass: isCancellation ? 'bg-rose-50 border-rose-200 hover:border-rose-400' : 'bg-amber-50 border-amber-200 hover:border-amber-400',
+      iconBg: isCancellation ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-amber-100 text-amber-700 font-bold',
+      customerName: targetJob?.customerName || 'Customer',
+      customerPhone: targetJob?.customerPhone || '',
+      technicianName: currentUser?.name || 'Rajesh Kumar',
+      technicianPhone: currentUser?.phone || '+91 98765 43210',
+      targetDispatcher: 'dispatcher@fixmate.com',
+      reasonType: reasonType,
+      notes: notes || 'Technician reported incident during active duty.',
+      price: targetJob?.price ? `${targetJob.price.toFixed(2)}` : '499.00',
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Save to Firebase Firestore (dispatches & dispatcher_alerts collections)
+    try {
+      await setDoc(doc(db, 'dispatches', alertId), alertItem, { merge: true });
+      await setDoc(doc(db, 'dispatcher_alerts', alertId), alertItem, { merge: true });
+    } catch (err) {
+      console.warn('Firestore write warning:', err);
+    }
+
+    // 2. Post to Express Backend API
+    fetch('http://localhost:5000/api/dispatches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(alertItem)
+    }).catch(err => console.warn('Express API dispatch warning:', err));
+
+    // 3. Sync to LocalStorage & trigger local window event
+    try {
+      const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([alertItem, ...localData]));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+    } catch(e) {}
+
+    // 4. Update local job status if cancellation requested
+    if (isCancellation) {
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'Cancelled' } : j));
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob(prev => ({ ...prev, status: 'Cancelled' }));
+      }
+    }
+
+    showToast(`🚨 Urgent alert dynamically sent to dispatcher@fixmate.com for #${jobId}: "${reasonType}"`);
   };
 
   // Auth Handler (Issues #1, #2)
@@ -243,134 +383,136 @@ export default function TechnicianModulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex overflow-hidden antialiased">
-      
-      {/* Full-width Sticky Header with StaggeredMenu Overlay */}
-      <TechHeader 
-        title={getPageTitle()}
-        availability={availability}
-        onToggleAvailability={handleToggleAvailability}
-        notifications={notifications}
-        onTriggerEmergency={() => setEmergencyModalOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setSelectedJob(null);
-        }}
-        currentUser={currentUser}
-      />
+    <ProtectedRoute allowedRole="technician">
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+        
+        {/* Full-width Sticky Header with StaggeredMenu Overlay & ProtectedRoute */}
+        <TechHeader 
+          title={getPageTitle()}
+          availability={availability}
+          onToggleAvailability={handleToggleAvailability}
+          notifications={notifications}
+          onTriggerEmergency={() => setEmergencyModalOpen(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onOpenAuth={(mode) => setAuthModal({ isOpen: true, mode })}
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setSelectedJob(null);
+          }}
+          currentUser={currentUser}
+        />
 
-      {/* Full Width Dashboard Screen Body */}
-      <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
-        {selectedJob ? (
-          <TechJobDetail 
-            job={selectedJob}
-            onBack={() => setSelectedJob(null)}
-            onUpdateStatus={handleUpdateStatus}
-            onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
-            onOpenReportDelay={() => setDelayModalOpen(true)}
-          />
-        ) : (
-          <>
-            {activeTab === 'dashboard' && (
-              <TechDashboard 
-                jobs={jobs}
-                onSelectJob={(j) => setSelectedJob(j)}
-                onViewAllJobs={() => setActiveTab('jobs')}
-                onTriggerEmergency={() => setEmergencyModalOpen(true)}
-                maxCapacity={MAX_DAILY_CAPACITY}
-              />
-            )}
+        {/* Full Width Dashboard Screen Body */}
+        <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
+          {selectedJob ? (
+            <TechJobDetail 
+              job={selectedJob}
+              onBack={() => setSelectedJob(null)}
+              onUpdateStatus={handleUpdateStatus}
+              onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
+              onOpenReportDelay={() => setDelayModalOpen(true)}
+            />
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <TechDashboard 
+                  jobs={jobs}
+                  onSelectJob={(j) => setSelectedJob(j)}
+                  onViewAllJobs={() => setActiveTab('jobs')}
+                  onTriggerEmergency={() => setEmergencyModalOpen(true)}
+                  maxCapacity={MAX_DAILY_CAPACITY}
+                />
+              )}
 
-            {activeTab === 'jobs' && (
-              <TechJobList 
-                jobs={jobs}
-                onSelectJob={(j) => setSelectedJob(j)}
-              />
-            )}
-
-            {activeTab === 'emergency' && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
-                    <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
-                  </div>
-                  <button 
-                    onClick={() => setEmergencyModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
-                  >
-                    Open Live Emergency Overlay
-                  </button>
-                </div>
+              {activeTab === 'jobs' && (
                 <TechJobList 
-                  jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                  jobs={jobs}
                   onSelectJob={(j) => setSelectedJob(j)}
                 />
-              </div>
-            )}
+              )}
 
-            {activeTab === 'performance' && (
-              <TechProfile 
-                availability={availability}
-                onToggleAvailability={handleToggleAvailability}
-                currentUser={currentUser}
-                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-              />
-            )}
+              {activeTab === 'emergency' && (
+                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts</h3>
+                      <p className="text-xs text-slate-500 font-medium">Real-time emergency jobs assigned by Regional Dispatcher</p>
+                    </div>
+                    <button 
+                      onClick={() => setEmergencyModalOpen(true)}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
+                    >
+                      Open Live Emergency Overlay
+                    </button>
+                  </div>
+                  <TechJobList 
+                    jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                    onSelectJob={(j) => setSelectedJob(j)}
+                  />
+                </div>
+              )}
 
-            {activeTab === 'profile' && (
-              <TechProfile 
-                availability={availability}
-                onToggleAvailability={handleToggleAvailability}
-                currentUser={currentUser}
-                onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-              />
-            )}
-          </>
+              {activeTab === 'performance' && (
+                <TechProfile 
+                  availability={availability}
+                  onToggleAvailability={handleToggleAvailability}
+                  currentUser={currentUser}
+                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                />
+              )}
+
+              {activeTab === 'profile' && (
+                <TechProfile 
+                  availability={availability}
+                  onToggleAvailability={handleToggleAvailability}
+                  currentUser={currentUser}
+                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                />
+              )}
+            </>
+          )}
+        </main>
+
+        {/* Modals & Overlays */}
+        <TechAuthModal 
+          isOpen={authModal.isOpen}
+          mode={authModal.mode}
+          onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
+          onAuthSuccess={handleAuthSuccess}
+        />
+
+        <TechEmergencyModal 
+          isOpen={emergencyModalOpen}
+          emergencyJob={mockEmergencyJob}
+          onAccept={handleAcceptEmergency}
+          onDecline={() => setEmergencyModalOpen(false)}
+        />
+
+        <TechExtraChargesModal 
+          isOpen={extraChargesModalOpen}
+          job={selectedJob}
+          onClose={() => setExtraChargesModalOpen(false)}
+          onAddCharges={handleAddExtraCharges}
+        />
+
+        <TechDelayModal 
+          isOpen={delayModalOpen}
+          job={selectedJob}
+          onClose={() => setDelayModalOpen(false)}
+          onReportDelay={handleReportDelay}
+        />
+
+        {/* Toast Notification Popup */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold animate-in slide-in-from-bottom duration-300 border border-white/10">
+            <Info className="w-5 h-5 text-blue-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
         )}
-      </main>
 
-      {/* Modals & Overlays */}
-      <TechAuthModal 
-        isOpen={authModal.isOpen}
-        mode={authModal.mode}
-        onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
-        onAuthSuccess={handleAuthSuccess}
-      />
-
-      <TechEmergencyModal 
-        isOpen={emergencyModalOpen}
-        emergencyJob={mockEmergencyJob}
-        onAccept={handleAcceptEmergency}
-        onDecline={() => setEmergencyModalOpen(false)}
-      />
-
-      <TechExtraChargesModal 
-        isOpen={extraChargesModalOpen}
-        job={selectedJob}
-        onClose={() => setExtraChargesModalOpen(false)}
-        onAddCharges={handleAddExtraCharges}
-      />
-
-      <TechDelayModal 
-        isOpen={delayModalOpen}
-        job={selectedJob}
-        onClose={() => setDelayModalOpen(false)}
-        onReportDelay={handleReportDelay}
-      />
-
-      {/* Toast Notification Popup */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold animate-in slide-in-from-bottom duration-300 border border-white/10">
-          <Info className="w-5 h-5 text-blue-400 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
