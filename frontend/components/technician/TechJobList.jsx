@@ -7,7 +7,12 @@ export default function TechJobList({ jobs = [], onSelectJob }) {
   const [search, setSearch] = useState('');
 
   const filteredJobs = jobs.filter(j => {
-    const isCancelledJob = j.status === 'Cancelled' || j.status === 'CANCELLED';
+    const isCancelledJob = 
+      j.status === 'Cancelled' || 
+      j.status === 'CANCELLED' || 
+      j.status === 'cancelled' ||
+      (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel')) ||
+      Boolean(j.cancellationReason);
 
     const matchesFilter = 
       filterTab === 'All' ? true :
@@ -24,6 +29,44 @@ export default function TechJobList({ jobs = [], onSelectJob }) {
       j.location.toLowerCase().includes(search.toLowerCase());
 
     return matchesFilter && matchesSearch;
+  }).sort((a, b) => {
+    const parseTimeMinutes = (timeStr) => {
+      if (!timeStr) return 0;
+      if (typeof timeStr === 'string' && timeStr.includes('T')) {
+        const d = new Date(timeStr);
+        if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
+      }
+      const match = String(timeStr).match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (!match) return 0;
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+      return hours * 60 + minutes;
+    };
+
+    const getJobTier = (job) => {
+      const isCancelled = 
+        job.status === 'Cancelled' || 
+        job.status === 'CANCELLED' || 
+        Boolean(job.cancellationReason);
+      const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency');
+      
+      if (isEmg) return 1; // Tier 1: Emergency Requests (Top)
+      if (isCancelled || job.tag === 'URGENT' || job.priority === 'HIGH') return 2; // Tier 2: Urgent / Mid-Cancelled
+      return 3; // Tier 3: Normal Service Requests
+    };
+
+    const tierA = getJobTier(a);
+    const tierB = getJobTier(b);
+    if (tierA !== tierB) return tierA - tierB;
+
+    const timeA = parseTimeMinutes(a.time || a.createdAt);
+    const timeB = parseTimeMinutes(b.time || b.createdAt);
+    return timeA - timeB;
   });
 
   return (
@@ -81,12 +124,23 @@ export default function TechJobList({ jobs = [], onSelectJob }) {
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {filteredJobs.length === 0 ? (
-          <div className="md:col-span-2 text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 text-xs font-bold text-slate-400 space-y-2">
-            <p>No jobs found matching "{filterTab}" category.</p>
+          <div className="md:col-span-2 text-center py-16 px-6 bg-white rounded-3xl border border-dashed border-slate-200 text-xs font-bold text-slate-400 space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center font-black text-lg">
+              📋
+            </div>
+            <h4 className="text-sm font-extrabold text-[#0A2540]">No Service Requests Assigned Yet</h4>
+            <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto">
+              When the Dispatcher assigns a customer service request to your roster, it will populate here dynamically in real time.
+            </p>
           </div>
         ) : (
           filteredJobs.map((job) => {
-            const isCancelled = job.status === 'Cancelled' || job.status === 'CANCELLED';
+            const isCancelled = 
+              job.status === 'Cancelled' || 
+              job.status === 'CANCELLED' || 
+              job.status === 'cancelled' || 
+              (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel')) ||
+              Boolean(job.cancellationReason);
 
             return (
               <div

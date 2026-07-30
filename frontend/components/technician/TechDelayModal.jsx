@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { AlertTriangle, Clock, X, Send, ShieldAlert } from 'lucide-react';
+import { Ban, X, Send, ShieldAlert } from 'lucide-react';
 
 export default function TechDelayModal({ 
   isOpen, 
@@ -8,15 +8,17 @@ export default function TechDelayModal({
   onClose, 
   onReportDelay 
 }) {
-  const [reasonType, setReasonType] = useState('Running Late');
+  const [reasonType, setReasonType] = useState('Unable to Reach Customer');
   const [notes, setNotes] = useState('');
 
   if (!isOpen || !job) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const finalReason = `Cancel Assignment: ${reasonType}`;
+
     if (onReportDelay) {
-      onReportDelay(job.id, reasonType, notes);
+      onReportDelay(job.id, finalReason, notes);
     }
     setNotes('');
     onClose();
@@ -24,7 +26,7 @@ export default function TechDelayModal({
 
   return (
     <div className="modal-overlay animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200/80 relative space-y-6">
+      <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border-2 border-rose-500 relative space-y-6">
         
         {/* Close Button */}
         <button 
@@ -36,39 +38,43 @@ export default function TechDelayModal({
 
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold shrink-0 shadow-inner">
+            <Ban className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-extrabold text-[#0A2540]">Report Delay / Cancellation</h3>
-            <p className="text-xs font-medium text-slate-500">Job #{job.id} • Dispatcher Alert Notification</p>
+            <h3 className="text-lg font-black text-[#0A2540]">Cancel Job Assignment</h3>
+            <p className="text-xs font-medium text-slate-500">Job #{job.id} • Urgent Dispatcher Alert</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
           <div>
-            <label className="font-bold text-slate-700 block mb-1.5">Select Incident Category *</label>
+            <label className="font-bold text-slate-700 block mb-1.5">
+              Select Mandatory Cancellation Reason *
+            </label>
+
             <div className="space-y-2">
               {[
-                { key: 'Running Late', label: '🚗 Running Late (Traffic / Prolonged Previous Job)' },
                 { key: 'Unable to Reach Customer', label: '📞 Unable to Reach Customer / No Answer' },
-                { key: 'Cancel Assignment', label: '🚫 Request Cancellation of Assignment' }
+                { key: 'Customer Requested Cancellation', label: '❌ Customer Requested Cancellation' },
+                { key: 'Invalid Address / Site Unreachable', label: '📍 Invalid Address / Site Unreachable' },
+                { key: 'Technical Emergency Issue', label: '⚠️ Technical Emergency / Equipment Safety Issue' }
               ].map((opt) => (
                 <label 
                   key={opt.key}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer font-bold transition-all ${
                     reasonType === opt.key 
-                      ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm' 
+                      ? 'bg-rose-50 border-rose-300 text-rose-900 shadow-sm'
                       : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   <input 
                     type="radio" 
-                    name="delayReason"
+                    name="cancellationReason"
                     checked={reasonType === opt.key}
                     onChange={() => setReasonType(opt.key)}
-                    className="accent-amber-600"
+                    className="accent-rose-600"
                   />
                   <span>{opt.label}</span>
                 </label>
@@ -77,26 +83,29 @@ export default function TechDelayModal({
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Additional Notes / Estimated Delay (Mins)</label>
+            <label className="font-bold text-slate-700 block mb-1">Additional Justification / Notes</label>
             <textarea 
               rows="3"
-              placeholder="e.g. Stuck in highway traffic congestion. Estimated 20 mins delay."
+              placeholder="Provide specific details regarding why this assignment must be cancelled..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-amber-500 transition-all"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-rose-500 transition-all"
             />
           </div>
 
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-semibold text-[11px]">
-            🚨 Submitting immediately broadcasts an urgent high-priority alert to the Regional Dispatcher terminal.
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <span>
+              🚨 Cancelling will immediately lock this job in Read-Only mode, reset your daily workload capacity, and send an Urgent Priority 10 Alert to the Dispatcher terminal.
+            </span>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 bg-[#0A2540] hover:bg-[#13395F] text-white font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl shadow-lg shadow-rose-900/20 transition-all flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            <span>Broadcast Alert to Dispatcher</span>
+            <span>Cancel Job & Notify Dispatcher Immediately</span>
           </button>
 
         </form>

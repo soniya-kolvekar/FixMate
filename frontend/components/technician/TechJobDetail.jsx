@@ -34,8 +34,13 @@ export default function TechJobDetail({
     { key: 'Completed', label: '6. Service Completed' }
   ];
 
-  const isCompleted = job.status === 'Completed';
-  const isCancelled = job.status === 'Cancelled' || job.status === 'CANCELLED';
+  const isCompleted = job.status === 'Completed' || job.status === 'COMPLETED' || job.status === 'completed';
+  const isCancelled = 
+    job.status === 'Cancelled' || 
+    job.status === 'CANCELLED' || 
+    job.status === 'cancelled' || 
+    (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel')) ||
+    Boolean(job.cancellationReason);
   const isLocked = isCompleted || isCancelled;
 
   const currentStageIndex = workflowStages.findIndex(s => s.key === job.status);
@@ -190,6 +195,11 @@ export default function TechJobDetail({
                 >
                   <CheckCircle2 className={`w-4 h-4 ${isCurrent ? 'text-white' : isPassed ? 'text-emerald-600' : isNextSequential ? 'text-emerald-500' : 'text-slate-300'}`} />
                   <span className="text-center leading-tight">{stage.label}</span>
+                  {(isPassed || isCurrent) && (
+                    <span className="text-[9px] font-semibold opacity-85 mt-0.5 flex items-center gap-0.5">
+                      ⏱️ {job.timestamps?.[stage.key] || (stage.key === 'Assigned' ? job.assignedAt || '09:30 AM' : 'Recorded')}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -244,35 +254,51 @@ export default function TechJobDetail({
             </div>
 
             <div className="space-y-2 text-xs font-semibold text-slate-600">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
-                <span>Base Service Rate</span>
-                <span>₹{fixedPrice.toFixed(2)}</span>
+              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                <span>Fixed Service Base Price (Locked)</span>
+                <span className="font-extrabold text-[#0A2540]">₹{fixedPrice.toFixed(2)}</span>
               </div>
+
+              {job.extraLabour > 0 && (
+                <div className="flex justify-between items-center pb-1 border-b border-slate-200/60 text-slate-600">
+                  <span>Additional Labour Charges</span>
+                  <span className="font-bold text-blue-600">+₹{job.extraLabour.toFixed(2)}</span>
+                </div>
+              )}
+
+              {job.extraMaterial > 0 && (
+                <div className="flex justify-between items-center pb-1 border-b border-slate-200/60 text-slate-600">
+                  <span>Additional Material Charges</span>
+                  <span className="font-bold text-blue-600">+₹{job.extraMaterial.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
-                <span>Additional Charges</span>
+                <span>Total Additional Charges</span>
                 <span className="font-extrabold text-blue-600">+₹{extraCharges.toFixed(2)}</span>
               </div>
 
               {job.extraChargesReason && (
-                <p className="text-[11px] text-slate-500 font-medium italic bg-white p-2 rounded-lg border border-slate-200/60">
-                  Justification: "{job.extraChargesReason}"
-                </p>
+                <div className="bg-white p-2.5 rounded-xl border border-slate-200/60 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Mandatory Justification Reason:</span>
+                  <p className="text-[11px] text-slate-700 font-medium italic">"{job.extraChargesReason}"</p>
+                </div>
               )}
 
               <div className="flex justify-between items-center pt-2 text-sm font-extrabold text-[#0A2540]">
-                <span>Total Final Bill</span>
-                <span>₹{totalAmount.toFixed(2)}</span>
+                <span>Calculated Final Total Bill</span>
+                <span className="text-base font-black text-emerald-700">₹{totalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* Job Description */}
+        {/* Job Description & Customer Notes */}
         <div className="space-y-2">
           <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Issue Description & Notes</h4>
           <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
-            {job.description || "No specific customer instructions provided."}
+            {job.description || job.notes || job.customerNote || "No specific customer instructions provided."}
           </p>
         </div>
 
