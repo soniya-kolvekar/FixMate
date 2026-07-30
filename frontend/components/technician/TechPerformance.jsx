@@ -19,11 +19,12 @@ export default function TechPerformance({
   // 1. Pure Dynamic Metric Calculations (No hardcoded offset additions)
   const jobsCompletedToday = jobs.filter(j => j.status === 'Completed').length;
   const totalJobsCompleted = jobsCompletedToday; // Purely dynamic count of completed jobs
-  const emergencyJobsAccepted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY') && j.status !== 'Cancelled').length;
-  const cancellationCount = jobs.filter(j => j.status === 'Cancelled' || j.status === 'CANCELLED').length;
+  const emergencyJobsAccepted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY' || j.category === 'Emergency') && j.status !== 'Cancelled').length;
+  const emergencyJobsCompleted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY' || j.category === 'Emergency') && j.status === 'Completed').length;
+  const cancellationCount = jobs.filter(j => j.status === 'Cancelled' || j.status === 'CANCELLED' || Boolean(j.cancellationReason)).length;
   
-  // Dynamic Monthly Payout Calculation based on real jobs
-  const totalEarnings = (totalJobsCompleted * 499) + (emergencyJobsAccepted * 200);
+  // Dynamic Monthly Payout Calculation based on COMPLETED jobs only
+  const totalEarnings = (totalJobsCompleted * 499) + (emergencyJobsCompleted * 200);
 
   const [reviews] = useState([
     {
@@ -207,8 +208,8 @@ export default function TechPerformance({
                 <span>₹{(totalJobsCompleted * 499).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Emergency Bonus Pay ({emergencyJobsAccepted})</span>
-                <span className="text-emerald-600 font-bold">+₹{(emergencyJobsAccepted * 200).toFixed(2)}</span>
+                <span>Emergency Bonus Pay ({emergencyJobsCompleted})</span>
+                <span className="text-emerald-600 font-bold">+₹{(emergencyJobsCompleted * 200).toFixed(2)}</span>
               </div>
             </div>
           </div>

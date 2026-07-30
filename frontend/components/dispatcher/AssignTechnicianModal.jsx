@@ -73,7 +73,8 @@ export default function AssignTechnicianModal({
               }
 
               return filteredTechs.map((tech) => {
-                const isOffline = tech.status === 'Offline';
+                const isCapacityFull = (tech.assigned || 0) >= 6;
+                const isOffline = tech.status === 'Offline' || isCapacityFull;
                 const isBusy = tech.status === 'Busy';
                 const isMatch = assigningDispatch.techSpecialty 
                   ? tech.specialty.toLowerCase().includes(assigningDispatch.techSpecialty.toLowerCase()) 

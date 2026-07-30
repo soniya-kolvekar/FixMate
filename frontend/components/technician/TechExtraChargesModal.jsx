@@ -36,7 +36,7 @@ export default function TechExtraChargesModal({
     }
 
     if (onAddCharges) {
-      onAddCharges(job.id, totalExtra, reason.trim());
+      onAddCharges(job.id, totalExtra, reason.trim(), numLabor, numMaterial);
     }
 
     setLaborCharge('');

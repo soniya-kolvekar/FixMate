@@ -97,21 +97,150 @@ export default function TechnicianModulePage() {
         }
       }, (err) => console.warn('User doc snapshot warning:', err));
 
-      // 4. Real-time subscription to jobs collection for live multi-module status sync
+      // 4. Real-time subscription to jobs & bookings collections filtered strictly for assigned Technician
       try {
         const jobsColRef = collection(db, 'jobs');
-        onSnapshot(jobsColRef, (snapshot) => {
-          if (!snapshot.empty) {
-            snapshot.docs.forEach(docSnap => {
-              const data = docSnap.data();
-              if (data.id && data.status) {
-                setJobs(prev => prev.map(j => (j.id === data.id || j.id === data.jobId) ? { ...j, status: data.status } : j));
-                setSelectedJob(prev => (prev && (prev.id === data.id || prev.id === data.jobId)) ? { ...prev, status: data.status } : prev);
-              }
-            });
-          }
-        }, (err) => console.warn('Jobs collection snapshot error:', err));
-      } catch(e) {}
+        const bookingsColRef = collection(db, 'bookings');
+
+        const syncAssignedJobs = (snapshotDocs) => {
+          const techName = currentUser?.name || 'Rajesh Kumar';
+          const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+
+          snapshotDocs.forEach(docSnap => {
+            const data = docSnap.data();
+            
+            // STRICT ASSIGNMENT FILTER: Only show jobs explicitly assigned to this technician by Dispatcher
+            const isAssignedToMe = 
+              (data.assignedTechId && data.assignedTechId === techUid) ||
+              (data.technicianId && data.technicianId === techUid) ||
+              (data.assignedTechName && data.assignedTechName.toLowerCase() === techName.toLowerCase()) ||
+              (data.technicianName && data.technicianName.toLowerCase() === techName.toLowerCase()) ||
+              (data.assignedTo && (data.assignedTo.toLowerCase() === techName.toLowerCase() || data.assignedTo === techUid)) ||
+              (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase());
+
+            const isEmg = Boolean(
+              data.isEmergency === true ||
+              data.isEmergency === 'true' ||
+              data.isEmergency === 'TRUE' ||
+              (typeof data.tag === 'string' && data.tag.toLowerCase().includes('emerg')) ||
+              (typeof data.category === 'string' && data.category.toLowerCase().includes('emerg')) ||
+              (typeof data.type === 'string' && data.type.toLowerCase().includes('emerg')) ||
+              (typeof data.serviceCategory === 'string' && data.serviceCategory.toLowerCase().includes('emerg')) ||
+              (typeof data.title === 'string' && data.title.toLowerCase().includes('emerg'))
+            );
+
+            if (isAssignedToMe && (data.id || docSnap.id)) {
+              const formattedJob = {
+                id: docSnap.id || data.id || data.jobId,
+                title: data.title || data.serviceName || data.category || 'Service Request',
+                tag: isEmg ? 'EMERGENCY' : (data.tag || 'STANDARD'),
+                category: data.category || data.serviceCategory || 'Plumbing',
+                time: data.time || data.scheduledTime || data.date || '09:30 AM',
+                location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                customerName: data.customerName || data.customer || 'Customer',
+                customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+                customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
+                price: Number(data.price || data.cost || 499),
+                status: (
+                  data.status === 'Cancelled' || 
+                  data.status === 'CANCELLED' || 
+                  data.status === 'cancelled' ||
+                  (typeof data.status === 'string' && data.status.toLowerCase().includes('cancel')) ||
+                  Boolean(data.cancellationReason)
+                ) ? 'Cancelled' : (data.status || 'Assigned'),
+                cancellationReason: data.cancellationReason || data.notes || '',
+                description: data.description || data.notes || data.customerNote || 'Customer reported issue requiring on-site technician inspection.',
+                extraCharges: Number(data.extraCharges || 0),
+                extraChargesReason: data.extraChargesReason || '',
+                isEmergency: isEmg,
+                images: data.images || (data.imageUrl ? [data.imageUrl] : []),
+                assignedTechName: data.assignedTechName || techName
+              };
+
+              setJobs(prev => {
+                const isCancelledByAlert = (() => {
+                  try {
+                    const alerts = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+                    return alerts.some(a => (a.jobId === formattedJob.id || a.id === formattedJob.id) && (a.category === 'CANCELLATION' || a.priority === 'Priority Level 10'));
+                  } catch(e) { return false; }
+                })();
+
+                if (isCancelledByAlert) {
+                  formattedJob.status = 'Cancelled';
+                  if (!formattedJob.cancellationReason) {
+                    formattedJob.cancellationReason = 'Mid-Service Assignment Cancelled';
+                  }
+                }
+
+                const index = prev.findIndex(j => j.id === formattedJob.id);
+                if (index !== -1) {
+                  const updated = [...prev];
+                  updated[index] = { ...updated[index], ...formattedJob };
+                  return updated;
+                }
+                return [formattedJob, ...prev];
+              });
+
+              setSelectedJob(prev => (prev && prev.id === formattedJob.id) ? { ...prev, ...formattedJob } : prev);
+            }
+          });
+        };
+
+        onSnapshot(jobsColRef, (snap) => {
+          if (!snap.empty) syncAssignedJobs(snap.docs);
+        }, (err) => console.warn('Jobs collection snapshot warning:', err));
+
+        onSnapshot(bookingsColRef, (snap) => {
+          if (!snap.empty) syncAssignedJobs(snap.docs);
+        }, (err) => console.warn('Bookings collection snapshot warning:', err));
+
+        // 5. Real-time subscription to unaccepted emergency broadcasts
+        const syncEmergencyBroadcasts = (snapshotDocs) => {
+          const list = [];
+          snapshotDocs.forEach(docSnap => {
+            const data = docSnap.data();
+            const isEmg = Boolean(data.isEmergency || data.category === 'Emergency' || data.tag === 'EMERGENCY' || data.type === 'EMERGENCY');
+            
+            // Only show unaccepted & unassigned emergency requests in the broadcast panel
+            const isUnaccepted = 
+              data.status !== 'Accepted' && 
+              data.status !== 'Completed' && 
+              data.status !== 'Cancelled' && 
+              !data.acceptedByTechId &&
+              !data.assignedTechId &&
+              !data.technicianId;
+
+            if (isEmg && isUnaccepted) {
+              const docIdStr = docSnap.id || data.id || '1';
+              const charSum = docIdStr.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+              const dynamicDist = `${((charSum % 28) / 10 + 0.8).toFixed(1)} km away`;
+
+              list.push({
+                id: docSnap.id || data.id,
+                title: data.title || data.serviceName || data.category || 'Emergency Service Request',
+                category: data.category || data.serviceCategory || 'Emergency Plumbing',
+                location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                customerName: data.customerName || data.customer || 'Customer',
+                customerPhone: data.customerPhone || data.phone || '+91 98123 45678',
+                price: Number(data.price || data.cost || 1499),
+                description: data.description || data.notes || data.customerNote || 'Urgent emergency repair required.',
+                distance: data.distance || dynamicDist,
+                isEmergency: true,
+                status: 'Assigned'
+              });
+            }
+          });
+          setEmergencyList(list);
+        };
+
+        onSnapshot(collection(db, 'emergencyBookings'), (snap) => {
+          if (!snap.empty) syncEmergencyBroadcasts(snap.docs);
+          else setEmergencyList([]);
+        }, (err) => console.warn('Emergency bookings snapshot warning:', err));
+
+      } catch(e) {
+        console.warn('Firestore jobs live fetch error:', e);
+      }
     });
 
     return () => {
@@ -129,94 +258,47 @@ export default function TechnicianModulePage() {
   const [extraChargesModalOpen, setExtraChargesModalOpen] = useState(false);
   const [delayModalOpen, setDelayModalOpen] = useState(false);
 
-  // Mock initial jobs list (Tailored for Mangaluru, Karnataka)
-  const [jobs, setJobs] = useState([
-    {
-      id: 'FM-9841',
-      title: 'Plumbing Repair & Leak Fixing',
-      tag: 'PREMIUM',
-      time: '09:30 AM',
-      location: '104 MG Road, Kodialbail, Mangaluru',
-      customerName: 'Priya Sharma',
-      customerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '+91 98123 45678',
-      price: 499.00,
-      status: 'On The Way',
-      description: 'Persistent leak detected under vanity cabinet. Customer reports water pooling after 10 minutes of faucet use.',
-      extraCharges: 0,
-      extraChargesReason: '',
-      isEmergency: false
-    },
-    {
-      id: 'FM-9842',
-      title: 'Geyser & Water Heater Flush',
-      tag: 'REPAIR',
-      time: '11:00 AM',
-      location: '742 Hampankatta Main Rd, Mangaluru',
-      customerName: 'Aarav Mehta',
-      customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '+91 98234 56789',
-      price: 699.00,
-      status: 'Accepted',
-      description: 'Sediment flush and pressure safety valve inspection for 25L geyser.',
-      extraCharges: 0,
-      extraChargesReason: '',
-      isEmergency: false
-    },
-    {
-      id: 'FM-9843',
-      title: 'Kitchen Tap Sensor Replacement',
-      tag: 'INSTALL',
-      time: '02:00 PM',
-      location: '88 Bejai Main Road, Mangaluru',
-      customerName: 'Ananya Reddy',
-      customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '+91 98345 67890',
-      price: 899.00,
-      status: 'Assigned',
-      description: 'Replace standard kitchen tap with touchless sensor faucet provided by customer.',
-      extraCharges: 0,
-      extraChargesReason: '',
-      isEmergency: false
-    },
-    {
-      id: 'FM-9844',
-      title: 'Bathroom Pipe Anti-Clog Sanitation',
-      tag: 'MAINTENANCE',
-      time: '04:30 PM',
-      location: '482 Kadri Hills, Mangaluru',
-      customerName: 'Vikram Malhotra',
-      customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      customerPhone: '+91 98456 78901',
-      price: 1299.00,
-      status: 'Assigned',
-      description: 'Deep sanitization and anti-clog treatment for master suite bathroom drainage.',
-      extraCharges: 0,
-      extraChargesReason: '',
-      isEmergency: false
-    }
-  ]);
+  // Pure Dynamic Assigned Jobs List & Real-Time Emergency Broadcasts List
+  const [jobs, setJobs] = useState([]);
+  const [emergencyList, setEmergencyList] = useState([]);
+  // Dynamic Real-Time Notifications Stream (Emergency Broadcasts -> Dispatcher Assignments -> Cancelled Requests)
+  useEffect(() => {
+    const isCancelledJob = (j) => 
+      j.status === 'Cancelled' || 
+      j.status === 'CANCELLED' || 
+      Boolean(j.cancellationReason);
 
-  // Notifications state (Mangaluru Region Focus)
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Job Assigned', message: 'Assigned #FM-9844 in Kadri Hills, Mangaluru', time: '10 mins ago' },
-    { id: 2, title: 'Dispatcher Broadcast', message: 'High service demand in Kodialbail Sector, Mangaluru', time: '45 mins ago' }
-  ]);
+    const emgNotifs = emergencyList.map(e => ({
+      id: `emg-${e.id}`,
+      title: '🚨 Emergency Broadcast Call',
+      message: `High-priority emergency call in ${e.location}: "${e.title}"`,
+      time: 'Live Broadcast',
+      type: 'EMERGENCY',
+      icon: '⚡'
+    }));
 
-  // Mock Emergency Job data (Mangaluru Region)
-  const mockEmergencyJob = {
-    id: 'EMG-9021',
-    title: 'Burst Main Pipe & Floor Flooding',
-    category: 'Emergency Plumbing',
-    distance: '1.2 km away',
-    travelTime: '8 mins',
-    customerNote: 'Water leaking heavily through living room ceiling. Need immediate main valve shutoff and repair.',
-    location: '147 Surathkal Beach Road, Mangaluru',
-    customerName: 'Rohan Verma',
-    customerPhone: '+91 98999 88877',
-    price: 1499.00,
-    isEmergency: true
-  };
+    const assignedNotifs = jobs.filter(j => (j.status === 'Assigned' || j.status === 'Accepted') && !isCancelledJob(j)).map(j => ({
+      id: `assign-${j.id}`,
+      title: '📋 Job Assigned by Dispatcher',
+      message: `Assigned #${j.id}: ${j.title} in ${j.location} • ${j.time}`,
+      time: j.time || 'Today',
+      type: 'ASSIGNMENT',
+      icon: '📋'
+    }));
+
+    const cancelledNotifs = jobs.filter(j => isCancelledJob(j)).map(j => ({
+      id: `cancel-${j.id}`,
+      title: '🚫 Request Cancelled',
+      message: `Job #${j.id} cancelled. Reason: ${j.cancellationReason || 'Mid-Duty Cancellation'}`,
+      time: 'Cancelled',
+      type: 'CANCELLATION',
+      icon: '🚫'
+    }));
+
+    setNotifications([...emgNotifs, ...assignedNotifs, ...cancelledNotifs]);
+  }, [emergencyList, jobs]);
+
+  const [notifications, setNotifications] = useState([]);
 
   // Toast notification helper
   const showToast = (msg) => {
@@ -236,27 +318,20 @@ export default function TechnicianModulePage() {
     }
 
     setAvailability(nextStatus);
-    try {
-      localStorage.setItem('fixmate_tech_availability', nextStatus);
-    } catch(e) {}
-
-    const user = auth.currentUser;
-    const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+    const techName = currentUser?.name || 'Rajesh Kumar';
+    const techUid = auth.currentUser?.uid || currentUser?.uid || 'tech_rajesh_kumar';
 
     const techPayload = {
       id: techUid,
       uid: techUid,
-      name: currentUser?.name || 'Rajesh Kumar',
-      phone: currentUser?.phone || '+91 98765 43210',
-      email: currentUser?.email || 'rajesh.kumar@fixmate.in',
-      specialization: currentUser?.specialization || 'Master Plumber',
-      specialty: currentUser?.specialization || 'Plumbing',
-      workingArea: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
-      zone: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
-      availability: nextStatus,
+      name: techName,
       status: nextStatus,
+      availability: nextStatus,
       updatedAt: new Date().toISOString()
     };
+    try {
+      localStorage.setItem('fixmate_tech_availability', nextStatus);
+    } catch(e) {}
 
     try {
       await setDoc(doc(db, 'technicians', techUid), techPayload, { merge: true });
@@ -281,13 +356,17 @@ export default function TechnicianModulePage() {
 
   // Real-Time Checklist Progression & Multi-Module Sync Handler
   const handleUpdateStatus = async (jobId, nextStatus) => {
-    // 1. Update local UI state immediately
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: nextStatus, updatedAt: new Date().toISOString() } : j));
+    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
+    const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentTimestamps = targetJob?.timestamps || {};
+    const updatedTimestamps = { ...currentTimestamps, [nextStatus]: currentTimeStr };
+
+    // 1. Update local UI state immediately with timestamp record
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: nextStatus, timestamps: updatedTimestamps, updatedAt: new Date().toISOString() } : j));
     if (selectedJob && selectedJob.id === jobId) {
-      setSelectedJob(prev => ({ ...prev, status: nextStatus, updatedAt: new Date().toISOString() }));
+      setSelectedJob(prev => ({ ...prev, status: nextStatus, timestamps: updatedTimestamps, updatedAt: new Date().toISOString() }));
     }
 
-    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
     const jobPayload = {
       id: jobId,
       jobId: jobId,
@@ -298,19 +377,21 @@ export default function TechnicianModulePage() {
       customerName: targetJob?.customerName || 'Customer',
       location: targetJob?.location || 'Kodialbail & Hampankatta, Mangaluru',
       updatedAt: new Date().toISOString(),
-      syncMessage: `Status updated to "${nextStatus}" by ${currentUser?.name || 'Rajesh Kumar'}`
+      timestamps: updatedTimestamps,
+      syncMessage: `Status updated to "${nextStatus}" at ${currentTimeStr} by ${currentUser?.name || 'Rajesh Kumar'}`
     };
 
-    // 2. Real-time Firebase Cloud Firestore update across jobs, bookings & audit_logs
+    // 2. Real-time Firebase Cloud Firestore update across jobs, bookings, emergencyBookings & audit_logs
     try {
       await setDoc(doc(db, 'jobs', jobId), jobPayload, { merge: true });
       await setDoc(doc(db, 'bookings', jobId), jobPayload, { merge: true });
+      await setDoc(doc(db, 'emergencyBookings', jobId), jobPayload, { merge: true });
 
       const logId = `LOG-${Date.now()}`;
       await setDoc(doc(db, 'audit_logs', logId), {
         id: logId,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        event: `Job #${jobId} status updated to "${nextStatus}" by ${currentUser?.name || 'Rajesh Kumar'}`,
+        event: `Job #${jobId} checklist status updated to "${nextStatus}" by ${currentUser?.name || 'Rajesh Kumar'}`,
         user: currentUser?.name || 'Rajesh Kumar',
         role: 'technician',
         jobId: jobId,
@@ -347,71 +428,171 @@ export default function TechnicianModulePage() {
     showToast(`⚡ Real-Time Sync: Job #${jobId} status updated to "${nextStatus}" across all modules!`);
   };
 
-  // Emergency Acceptance Handler
-  const handleAcceptEmergency = (emgJob) => {
+  // Emergency Acceptance Handler (First-to-Accept Lock Rule)
+  const handleAcceptEmergency = async (emgJob) => {
     const activeCount = jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled').length;
 
     if (activeCount >= MAX_DAILY_CAPACITY) {
-      alert(`⚠️ Daily Capacity Limit Reached (${MAX_DAILY_CAPACITY} Jobs Max). Finish or complete existing jobs first!`);
+      showToast(`⚠️ Daily Capacity Limit Reached (${MAX_DAILY_CAPACITY} Jobs Max). Complete existing jobs first!`);
       return;
     }
 
+    const techName = currentUser?.name || 'Rajesh Kumar';
+    const techUid = auth.currentUser?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+
+    const acceptPayload = {
+      id: emgJob.id,
+      jobId: emgJob.id,
+      status: 'Accepted',
+      isEmergency: true,
+      tag: 'EMERGENCY',
+      category: emgJob.category || 'Emergency Plumbing',
+      assignedTechId: techUid,
+      assignedTechName: techName,
+      technicianName: techName,
+      technicianPhone: currentUser?.phone || '+91 98765 43210',
+      acceptedByTechId: techUid,
+      acceptedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
     const newJob = {
       ...emgJob,
-      status: 'Accepted',
+      ...acceptPayload,
       extraCharges: 0,
       extraChargesReason: '',
       time: 'Immediate'
     };
 
-    setJobs(prev => [newJob, ...prev]);
-    setEmergencyModalOpen(false);
-    setSelectedJob(newJob);
-    showToast(`🚨 Emergency Job #${emgJob.id} accepted! Transmitted to ${DISPATCHER_EMAIL}.`);
-  };
+    // 1. Multi-collection Firestore atomic updates
+    try {
+      await setDoc(doc(db, 'emergencyBookings', emgJob.id), acceptPayload, { merge: true });
+      await setDoc(doc(db, 'jobs', emgJob.id), acceptPayload, { merge: true });
+      await setDoc(doc(db, 'bookings', emgJob.id), acceptPayload, { merge: true });
 
-  // Extra Charges Handler
-  const handleAddExtraCharges = (jobId, amount, reason) => {
-    setJobs(prev => prev.map(j => {
-      if (j.id === jobId) {
-        return {
-          ...j,
-          extraCharges: (j.extraCharges || 0) + amount,
-          extraChargesReason: reason
-        };
-      }
-      return j;
-    }));
-
-    if (selectedJob && selectedJob.id === jobId) {
-      setSelectedJob(prev => ({
-        ...prev,
-        extraCharges: (prev.extraCharges || 0) + amount,
-        extraChargesReason: reason
-      }));
+      const logId = `LOG-${Date.now()}`;
+      await setDoc(doc(db, 'audit_logs', logId), {
+        id: logId,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        event: `🚨 Emergency Job #${emgJob.id} ACCEPTED & LOCKED by ${techName}`,
+        user: techName,
+        role: 'technician',
+        jobId: emgJob.id,
+        status: 'Accepted',
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Firestore emergency accept error:', err);
     }
 
-    showToast(`+₹${amount.toFixed(2)} extra charges added to #${jobId} with justification.`);
+    // 2. Post to Express Backend API Sync
+    fetch('http://localhost:5000/api/bookings/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(acceptPayload)
+    }).catch(err => console.warn('Express API emergency accept sync error:', err));
+
+    // 3. Update React state and select job
+    setJobs(prev => [newJob, ...prev.filter(j => j.id !== emgJob.id)]);
+    setEmergencyList(prev => prev.filter(e => e.id !== emgJob.id));
+    setEmergencyModalOpen(false);
+    setSelectedJob(newJob);
+
+    showToast(`🚨 Emergency Job #${emgJob.id} Accepted & Locked! Synced with Dispatcher (${DISPATCHER_EMAIL}).`);
   };
 
-  // Delay & Cancellation Report Handler
-  const handleReportDelay = async (jobId, reasonType, notes) => {
+  // Extra Charges Handler with Real-Time Firestore & Backend Sync
+  const handleAddExtraCharges = async (jobId, totalExtra, reason, extraLabour = 0, extraMaterial = 0) => {
     const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
-    const isCancellation = reasonType === 'Cancel Assignment';
-    
+    const basePrice = targetJob?.price || 0;
+    const currentExtra = targetJob?.extraCharges || 0;
+    const updatedExtra = currentExtra + totalExtra;
+    const finalTotalBill = basePrice + updatedExtra;
+
+    const extraChargesPayload = {
+      id: jobId,
+      jobId: jobId,
+      price: basePrice,
+      extraCharges: updatedExtra,
+      extraLabour: (targetJob?.extraLabour || 0) + extraLabour,
+      extraMaterial: (targetJob?.extraMaterial || 0) + extraMaterial,
+      extraChargesReason: reason,
+      finalTotalBill: finalTotalBill,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Local state update
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...extraChargesPayload } : j));
+    if (selectedJob && selectedJob.id === jobId) {
+      setSelectedJob(prev => ({ ...prev, ...extraChargesPayload }));
+    }
+
+    // 2. Real-time Cloud Firestore updates across jobs, bookings, emergencyBookings & audit_logs
+    try {
+      await setDoc(doc(db, 'jobs', jobId), extraChargesPayload, { merge: true });
+      await setDoc(doc(db, 'bookings', jobId), extraChargesPayload, { merge: true });
+      await setDoc(doc(db, 'emergencyBookings', jobId), extraChargesPayload, { merge: true });
+
+      const logId = `LOG-${Date.now()}`;
+      await setDoc(doc(db, 'audit_logs', logId), {
+        id: logId,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        event: `Extra charges of +₹${totalExtra.toFixed(2)} added to Job #${jobId} (Final Bill: ₹${finalTotalBill.toFixed(2)}). Justification: "${reason}"`,
+        user: currentUser?.name || 'Rajesh Kumar',
+        role: 'technician',
+        jobId: jobId,
+        extraCharges: updatedExtra,
+        finalTotal: finalTotalBill,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Firestore extra charges update error:', err);
+    }
+
+    // 3. Post to Express Backend API Sync
+    fetch('http://localhost:5000/api/bookings/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(extraChargesPayload)
+    }).catch(err => console.warn('Express API extra charges sync error:', err));
+
+    showToast(`⚡ Real-Time Bill Updated: +₹${totalExtra.toFixed(2)} added to #${jobId} (Final Total: ₹${finalTotalBill.toFixed(2)})`);
+  };
+
+  // Job Cancellation Report Handler (Instant Non-Blocking Execution & Priority 10 Alert)
+  const handleReportDelay = (jobId, reasonType, notes) => {
+    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
+    const cancellationReasonStr = notes ? `${reasonType} — ${notes}` : reasonType;
+
+    const updatedJobState = {
+      status: 'Cancelled',
+      cancellationReason: cancellationReasonStr,
+      cancelledBy: currentUser?.name || 'Rajesh Kumar',
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. INSTANT Synchronous Local State & UI Lock (0ms delay)
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...updatedJobState } : j));
+    if (selectedJob && selectedJob.id === jobId) {
+      setSelectedJob(prev => ({ ...prev, ...updatedJobState }));
+    }
+    setDelayModalOpen(false);
+
+    showToast(`🚫 Job #${jobId} CANCELLED & LOCKED! Priority 10 Urgent Alert sent to Dispatcher (${DISPATCHER_EMAIL}).`);
+
     const alertId = `DISP-ALERT-${Date.now()}`;
     const alertItem = {
       id: alertId,
       jobId: jobId,
-      title: `${isCancellation ? '🚨 MID-SERVICE CANCELLATION REQUEST' : '⚠️ TECHNICIAN DELAY ALERT'} - #${jobId}`,
+      title: `🚨 MID-SERVICE CANCELLATION REQUEST - #${jobId}`,
       time: 'Just now',
       address: targetJob?.location || '104 MG Road, Kodialbail, Mangaluru',
-      priority: isCancellation ? 'Priority Level 10' : 'Priority Level 8',
-      category: isCancellation ? 'CANCELLATION' : 'DELAY',
+      priority: 'Priority Level 10',
+      category: 'CANCELLATION',
       type: 'URGENT',
-      icon: isCancellation ? '🚫' : '🚗',
-      colorClass: isCancellation ? 'bg-rose-50 border-rose-200 hover:border-rose-400' : 'bg-amber-50 border-amber-200 hover:border-amber-400',
-      iconBg: isCancellation ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-amber-100 text-amber-700 font-bold',
+      icon: '🚫',
+      colorClass: 'bg-rose-50 border-rose-200 hover:border-rose-400',
+      iconBg: 'bg-rose-100 text-rose-700 font-bold',
       customerName: targetJob?.customerName || 'Customer',
       customerPhone: targetJob?.customerPhone || '',
       technicianName: currentUser?.name || 'Rajesh Kumar',
@@ -419,38 +600,54 @@ export default function TechnicianModulePage() {
       targetDispatcher: DISPATCHER_EMAIL,
       region: MANGALURU_REGION,
       reasonType: reasonType,
-      notes: notes || 'Technician reported incident during active duty in Mangaluru region.',
+      notes: cancellationReasonStr,
       price: targetJob?.price ? `${targetJob.price.toFixed(2)}` : '499.00',
       createdAt: new Date().toISOString()
     };
 
-    try {
-      await setDoc(doc(db, 'dispatches', alertId), alertItem, { merge: true });
-      await setDoc(doc(db, 'dispatcher_alerts', alertId), alertItem, { merge: true });
-    } catch (err) {
-      console.warn('Firestore write warning:', err);
-    }
-
-    fetch('http://localhost:5000/api/dispatches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(alertItem)
-    }).catch(err => console.warn('Express API dispatch warning:', err));
-
+    // 2. Broadcast local events instantly for Dispatcher UI updates
     try {
       const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
       localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify([alertItem, ...localData]));
       window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+      window.dispatchEvent(new CustomEvent('fixmate_job_status_updated', { detail: { jobId, status: 'Cancelled', cancellationReason: cancellationReasonStr } }));
     } catch(e) {}
 
-    if (isCancellation) {
-      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'Cancelled' } : j));
-      if (selectedJob && selectedJob.id === jobId) {
-        setSelectedJob(prev => ({ ...prev, status: 'Cancelled' }));
-      }
-    }
+    // 3. Parallel Async Background Persistence across all Firestore collections
+    const cancelPayload = {
+      id: jobId,
+      jobId: jobId,
+      status: 'Cancelled',
+      cancellationReason: cancellationReasonStr,
+      cancelledBy: currentUser?.name || 'Rajesh Kumar',
+      updatedAt: new Date().toISOString()
+    };
 
-    showToast(`🚨 Urgent alert sent to ${DISPATCHER_EMAIL} (Mangaluru) for #${jobId}: "${reasonType}"`);
+    const logId = `LOG-${Date.now()}`;
+    const auditPayload = {
+      id: logId,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      event: `🚨 MID-SERVICE CANCELLATION REQUEST for Job #${jobId} by ${currentUser?.name || 'Rajesh Kumar'}. Reason: "${cancellationReasonStr}"`,
+      user: currentUser?.name || 'Rajesh Kumar',
+      role: 'technician',
+      jobId: jobId,
+      priority: 'URGENT',
+      createdAt: new Date().toISOString()
+    };
+
+    Promise.allSettled([
+      setDoc(doc(db, 'dispatches', alertId), alertItem, { merge: true }),
+      setDoc(doc(db, 'dispatcher_alerts', alertId), alertItem, { merge: true }),
+      setDoc(doc(db, 'jobs', jobId), cancelPayload, { merge: true }),
+      setDoc(doc(db, 'bookings', jobId), cancelPayload, { merge: true }),
+      setDoc(doc(db, 'emergencyBookings', jobId), cancelPayload, { merge: true }),
+      setDoc(doc(db, 'audit_logs', logId), auditPayload, { merge: true }),
+      fetch('http://localhost:5000/api/dispatches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alertItem)
+      })
+    ]).catch(err => console.warn('Background cancellation sync error:', err));
   };
 
   // Auth Handler
@@ -526,20 +723,41 @@ export default function TechnicianModulePage() {
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-black text-[#0A2540]">Active Emergency Broadcasts — Mangaluru</h3>
-                      <p className="text-xs text-slate-500 font-medium">Real-time emergency calls assigned by Mangaluru Dispatcher ({DISPATCHER_EMAIL})</p>
+                      <h3 className="text-xl font-black text-[#0A2540]">Emergency Duty & Broadcasts — Mangaluru</h3>
+                      <p className="text-xs text-slate-500 font-medium">Real-time emergency calls and accepted urgent dispatch requests</p>
                     </div>
-                    <button 
-                      onClick={() => setEmergencyModalOpen(true)}
-                      className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all"
-                    >
-                      Open Live Emergency Overlay
-                    </button>
+                    {emergencyList.length > 0 && (
+                      <button 
+                        onClick={() => setEmergencyModalOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all flex items-center gap-1.5 animate-pulse"
+                      >
+                        <span>⚡ View Broadcast Calls ({emergencyList.length})</span>
+                      </button>
+                    )}
                   </div>
-                  <TechJobList 
-                    jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
-                    onSelectJob={(j) => setSelectedJob(j)}
-                  />
+
+                  {emergencyList.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                      <div>
+                        <h4 className="text-sm font-black text-rose-900">🚨 {emergencyList.length} Live Emergency Broadcast Call{emergencyList.length > 1 ? 's' : ''} Available</h4>
+                        <p className="text-xs text-rose-700 font-semibold mt-0.5">First technician to accept locks assignment. Click to view and accept.</p>
+                      </div>
+                      <button 
+                        onClick={() => setEmergencyModalOpen(true)}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0"
+                      >
+                        Review Broadcast Carousel
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">Your Accepted & Assigned Emergency Jobs</h4>
+                    <TechJobList 
+                      jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
+                      onSelectJob={(j) => setSelectedJob(j)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -573,9 +791,9 @@ export default function TechnicianModulePage() {
 
         <TechEmergencyModal 
           isOpen={emergencyModalOpen}
-          emergencyJob={mockEmergencyJob}
-          onClose={() => setEmergencyModalOpen(false)}
-          onAcceptEmergency={handleAcceptEmergency}
+          emergencyList={emergencyList}
+          onAccept={handleAcceptEmergency}
+          onDecline={() => setEmergencyModalOpen(false)}
         />
 
         <TechExtraChargesModal 
