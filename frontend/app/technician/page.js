@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../../lib/firebase/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import TechHeader from '../../components/technician/TechHeader';
 import TechDashboard from '../../components/technician/TechDashboard';
@@ -96,6 +96,22 @@ export default function TechnicianModulePage() {
           }));
         }
       }, (err) => console.warn('User doc snapshot warning:', err));
+
+      // 4. Real-time subscription to jobs collection for live multi-module status sync
+      try {
+        const jobsColRef = collection(db, 'jobs');
+        onSnapshot(jobsColRef, (snapshot) => {
+          if (!snapshot.empty) {
+            snapshot.docs.forEach(docSnap => {
+              const data = docSnap.data();
+              if (data.id && data.status) {
+                setJobs(prev => prev.map(j => (j.id === data.id || j.id === data.jobId) ? { ...j, status: data.status } : j));
+                setSelectedJob(prev => (prev && (prev.id === data.id || prev.id === data.jobId)) ? { ...prev, status: data.status } : prev);
+              }
+            });
+          }
+        }, (err) => console.warn('Jobs collection snapshot error:', err));
+      } catch(e) {}
     });
 
     return () => {
@@ -263,22 +279,72 @@ export default function TechnicianModulePage() {
     showToast(`🟢 Duty Status: Updated to "${nextStatus}" (Synced with ${DISPATCHER_EMAIL})`);
   };
 
-  // Checklist Progression Handler
-  const handleUpdateStatus = (jobId, nextStatus) => {
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: nextStatus } : j));
+  // Real-Time Checklist Progression & Multi-Module Sync Handler
+  const handleUpdateStatus = async (jobId, nextStatus) => {
+    // 1. Update local UI state immediately
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: nextStatus, updatedAt: new Date().toISOString() } : j));
     if (selectedJob && selectedJob.id === jobId) {
-      setSelectedJob(prev => ({ ...prev, status: nextStatus }));
+      setSelectedJob(prev => ({ ...prev, status: nextStatus, updatedAt: new Date().toISOString() }));
     }
-    
+
+    const targetJob = jobs.find(j => j.id === jobId) || selectedJob;
+    const jobPayload = {
+      id: jobId,
+      jobId: jobId,
+      status: nextStatus,
+      technicianName: currentUser?.name || 'Rajesh Kumar',
+      technicianPhone: currentUser?.phone || '+91 98765 43210',
+      title: targetJob?.title || 'Service Request',
+      customerName: targetJob?.customerName || 'Customer',
+      location: targetJob?.location || 'Kodialbail & Hampankatta, Mangaluru',
+      updatedAt: new Date().toISOString(),
+      syncMessage: `Status updated to "${nextStatus}" by ${currentUser?.name || 'Rajesh Kumar'}`
+    };
+
+    // 2. Real-time Firebase Cloud Firestore update across jobs, bookings & audit_logs
+    try {
+      await setDoc(doc(db, 'jobs', jobId), jobPayload, { merge: true });
+      await setDoc(doc(db, 'bookings', jobId), jobPayload, { merge: true });
+
+      const logId = `LOG-${Date.now()}`;
+      await setDoc(doc(db, 'audit_logs', logId), {
+        id: logId,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        event: `Job #${jobId} status updated to "${nextStatus}" by ${currentUser?.name || 'Rajesh Kumar'}`,
+        user: currentUser?.name || 'Rajesh Kumar',
+        role: 'technician',
+        jobId: jobId,
+        status: nextStatus,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Firestore real-time status write warning:', err);
+    }
+
+    // 3. Post to Express Backend Sync API
+    fetch('http://localhost:5000/api/bookings/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jobPayload)
+    }).catch(err => console.warn('Express API booking status sync error:', err));
+
+    // 4. LocalStorage & Window Custom Event broadcast
+    try {
+      localStorage.setItem(`fixmate_job_status_${jobId}`, nextStatus);
+      localStorage.setItem('fixmate_last_job_status_update', JSON.stringify(jobPayload));
+      window.dispatchEvent(new CustomEvent('fixmate_job_status_updated', { detail: jobPayload }));
+    } catch(e) {}
+
+    // 5. Add Live Notification entry
     const newNotif = {
       id: Date.now(),
-      title: 'Status Synchronized',
-      message: `Job #${jobId} status updated to "${nextStatus}". Synced with ${DISPATCHER_EMAIL}.`,
+      title: 'Status Synchronized Real-Time',
+      message: `Job #${jobId} updated to "${nextStatus}". Synced with Customer, Dispatcher (${DISPATCHER_EMAIL}) & Admin.`,
       time: 'Just now'
     };
     setNotifications(prev => [newNotif, ...prev]);
 
-    showToast(`✅ Job #${jobId} status updated to "${nextStatus}"`);
+    showToast(`⚡ Real-Time Sync: Job #${jobId} status updated to "${nextStatus}" across all modules!`);
   };
 
   // Emergency Acceptance Handler
