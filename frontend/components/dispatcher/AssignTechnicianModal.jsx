@@ -40,59 +40,92 @@ export default function AssignTechnicianModal({
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Select Technician Roster (Real-Time Status)</label>
           
           <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-            {technicians.map((tech) => {
-              const isOffline = tech.status === 'Offline';
-              const isBusy = tech.status === 'Busy';
-              const isMatch = assigningDispatch.techSpecialty 
-                ? tech.specialty.toLowerCase().includes(assigningDispatch.techSpecialty.toLowerCase()) 
-                : tech.name.toLowerCase() === assigningDispatch.recommendedTech?.toLowerCase();
+            {(() => {
+              const getJobSpecialtyKey = (serviceName) => {
+                const s = (serviceName || '').toLowerCase();
+                if (s.includes('plumb')) return 'plumb';
+                if (s.includes('elect')) return 'elect';
+                if (s.includes('ac ') || s.includes('ac_') || s.includes('hvac') || s.includes('air conditioning') || s.includes('maintenance')) return 'hvac';
+                if (s.includes('clean')) return 'clean';
+                if (s.includes('appliance')) return 'appliance';
+                if (s.includes('carpen')) return 'carpen';
+                if (s.includes('paint')) return 'paint';
+                if (s.includes('pest')) return 'pest';
+                return s;
+              };
 
-              return (
-                <button
-                  key={tech.name}
-                  disabled={isOffline}
-                  onClick={() => !isOffline && handleConfirmAssignment(tech.name)}
-                  className={`w-full text-left p-4 rounded-xl border flex justify-between items-center transition-all group ${
-                    isOffline 
-                      ? 'border-slate-200 bg-slate-100/60 opacity-60 cursor-not-allowed'
-                      : isBusy
-                        ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50'
-                        : isMatch 
-                          ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50' 
-                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-extrabold text-sm text-slate-800 group-hover:text-blue-700">{tech.name}</h4>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
-                        isOffline 
-                          ? 'bg-slate-200 text-slate-600'
-                          : isBusy
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        ● {tech.status}
-                      </span>
-                      {isMatch && !isOffline && (
-                        <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                          ⭐ Specialty Match
+              const isTechnicianMatch = (techSpecialty, jobService) => {
+                if (!techSpecialty || !jobService) return false;
+                const techKey = getJobSpecialtyKey(techSpecialty);
+                const jobKey = getJobSpecialtyKey(jobService);
+                return techKey === jobKey || techSpecialty.toLowerCase().includes(jobKey) || jobService.toLowerCase().includes(techKey);
+              };
+
+              const jobCategory = assigningDispatch.techSpecialty || assigningDispatch.category || '';
+              const filteredTechs = technicians.filter(tech => isTechnicianMatch(tech.specialty, jobCategory));
+
+              if (filteredTechs.length === 0) {
+                return (
+                  <div className="text-center py-8 px-4 text-xs text-slate-550 font-bold border border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    ⚠️ No active technicians registered for "{jobCategory}" specialty in the database.
+                  </div>
+                );
+              }
+
+              return filteredTechs.map((tech) => {
+                const isOffline = tech.status === 'Offline';
+                const isBusy = tech.status === 'Busy';
+                const isMatch = assigningDispatch.techSpecialty 
+                  ? tech.specialty.toLowerCase().includes(assigningDispatch.techSpecialty.toLowerCase()) 
+                  : tech.name.toLowerCase() === assigningDispatch.recommendedTech?.toLowerCase();
+
+                return (
+                  <button
+                    key={tech.name}
+                    disabled={isOffline}
+                    onClick={() => !isOffline && handleConfirmAssignment(tech.name)}
+                    className={`w-full text-left p-4 rounded-xl border flex justify-between items-center transition-all group ${
+                      isOffline 
+                        ? 'border-slate-200 bg-slate-100/60 opacity-60 cursor-not-allowed'
+                        : isBusy
+                          ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50'
+                          : isMatch 
+                            ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50' 
+                            : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-extrabold text-sm text-slate-800 group-hover:text-blue-700">{tech.name}</h4>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                          isOffline 
+                            ? 'bg-slate-200 text-slate-600'
+                            : isBusy
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          ● {tech.status}
                         </span>
-                      )}
+                        {isMatch && !isOffline && (
+                          <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                            ⭐ Specialty Match
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">
+                        {tech.specialty} • Zone: {tech.zone || 'Bengaluru'}
+                        {isOffline && ' • (Receives No Assignments)'}
+                        {isBusy && ' • (Finishing Existing Work)'}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">
-                      {tech.specialty} • Zone: {tech.zone || 'Bengaluru'}
-                      {isOffline && ' • (Receives No Assignments)'}
-                      {isBusy && ' • (Finishing Existing Work)'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-extrabold text-[#0A2540] block">{tech.assigned} / 6 jobs</span>
-                    <span className="text-[9px] font-bold text-slate-400 block">{tech.travel} in transit</span>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="text-right">
+                      <span className="text-xs font-extrabold text-[#0A2540] block">{tech.assigned} / 6 jobs</span>
+                      <span className="text-[9px] font-bold text-slate-400 block">{tech.travel} in transit</span>
+                    </div>
+                  </button>
+                );
+              });
+            })()}
           </div>
         </div>
 

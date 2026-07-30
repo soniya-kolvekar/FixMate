@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Zap,
@@ -12,10 +13,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-export default function ServList() {
+function ServListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-const emergency = searchParams.get("emergency");
+  const emergency = searchParams.get("emergency");
 
   const services = [
     {
@@ -25,100 +26,88 @@ const emergency = searchParams.get("emergency");
     },
     {
       title: 'Plumbing',
-      description: 'Leak repairs, tap installation, pipe maintenance and bathroom fittings.',
+      description: 'Leaking pipes, tap installations, drain cleaning and plumbing fixes.',
       icon: Wrench,
     },
     {
-      title: 'AC Repair',
-      description: 'AC servicing, installation, gas refilling and cooling issue repairs.',
+      title: 'AC Service',
+      description: 'AC installation, filter cleaning, gas filling and cooling repair.',
       icon: Wind,
     },
     {
       title: 'Appliance Repair',
-      description: 'Repair services for TVs, Refrigerators, Washing Machines and Microwaves.',
+      description: 'Washing machine, refrigerator, microwave and other appliance fixing.',
       icon: Refrigerator,
     },
     {
       title: 'Carpentry',
-      description: 'Furniture assembly, door repair, shelf installation and woodwork.',
+      description: 'Furniture assembly, door adjustments, custom woodwork and repairs.',
       icon: Hammer,
     },
     {
       title: 'Painting',
-      description: 'Interior, exterior, texture and ceiling painting services.',
+      description: 'Complete home painting, wall touching, wall decoration and coloring.',
       icon: Paintbrush,
-    },
-    {
-      title: 'Cleaning',
-      description: 'Deep home, kitchen, bathroom and sofa cleaning by professionals.',
-      icon: Sparkles,
     },
   ];
 
-  const handleCategory = (category) => {
-  const url = emergency === "true"
-    ? `/customer/services?category=${encodeURIComponent(category)}&emergency=true`
-    : `/customer/services?category=${encodeURIComponent(category)}`;
-
-  router.push(url);
-};
+  const handleCategory = (categoryName) => {
+    if (emergency) {
+      router.push(`/customer/emergency?category=${encodeURIComponent(categoryName)}`);
+    } else {
+      router.push(`/customer/bookings/new?category=${encodeURIComponent(categoryName)}`);
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto px-6 py-10">
+    <main className="min-h-screen bg-slate-50 py-12 px-6">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-4 border border-blue-100">
+            <Sparkles size={16} />
+            Professional Home Services
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-[#0A2540] tracking-tight">
+            FixMate Service Roster
+          </h1>
+          <p className="text-slate-500 mt-4 text-base max-w-xl mx-auto font-medium">
+            Select a service category below to schedule your expert maintenance assistance.
+          </p>
+        </div>
 
-        <h1 className="text-4xl font-bold text-[#0A2540]">
-          Service Categories
-        </h1>
-
-        <p className="text-slate-600 mt-2 mb-10">
-          Choose a category to explore available services.
-        </p>
-
-        <div className="space-y-6">
-
-          {services.map((service) => {
+        {/* Services List Column */}
+        <div className="space-y-6 max-w-5xl mx-auto">
+          {services.map((service, index) => {
             const Icon = service.icon;
-
             return (
-              <div
-                key={service.title}
-                className="bg-white rounded-2xl shadow-md border border-slate-200 hover:shadow-xl transition-all duration-300 p-6"
+              <div 
+                key={index}
+                className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-
-                  {/* Left Side */}
-                  <div className="flex items-start gap-5">
-
-                    <div className="w-16 h-16 rounded-2xl bg-[#0A2540]/10 flex items-center justify-center">
-                      <Icon
-                        size={34}
-                        className="text-[#0A2540]"
-                      />
-                    </div>
-
-                    <div>
-                      <h2 className="text-2xl font-bold text-[#0A2540]">
-                        {service.title}
-                      </h2>
-
-                      <p className="text-slate-600 mt-2 max-w-3xl leading-7">
-                        {service.description}
-                      </p>
-                    </div>
-
+                {/* Left Side: Icon & Details */}
+                <div className="flex items-start gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 shrink-0 shadow-sm">
+                    <Icon size={28} />
                   </div>
-
-                  {/* Right Side */}
-                  <button
-                    onClick={() => handleCategory(service.title)}
-                    className="bg-[#0A2540] hover:bg-[#12395f] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 whitespace-nowrap"
-                  >
-                    Check Out Service
-                    <ArrowRight size={18} />
-                  </button>
-
+                  <div>
+                    <h3 className="text-xl font-bold text-[#0A2540]">{service.title}</h3>
+                    <p className="text-slate-500 mt-1.5 text-sm leading-relaxed max-w-2xl font-medium">
+                      {service.description}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Right Side */}
+                <button
+                  onClick={() => handleCategory(service.title)}
+                  className="bg-[#0A2540] hover:bg-[#12395f] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 whitespace-nowrap"
+                >
+                  Check Out Service
+                  <ArrowRight size={18} />
+                </button>
+
               </div>
             );
           })}
@@ -127,5 +116,13 @@ const emergency = searchParams.get("emergency");
 
       </div>
     </main>
+  );
+}
+
+export default function ServList() {
+  return (
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-10 text-slate-500 font-bold">Loading services...</div>}>
+      <ServListContent />
+    </Suspense>
   );
 }
