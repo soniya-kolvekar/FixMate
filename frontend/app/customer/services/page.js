@@ -9,15 +9,22 @@ function ServicesPageContent() {
   const router = useRouter();
 
   const category = searchParams.get('category');
+  const emergency = searchParams.get('emergency');
   const services = serviceCategories[category] || [];
 
   const handleBooking = (service) => {
-    router.push(
-      `/customer/bookings/new?category=${encodeURIComponent(
-        category
-      )}&serviceId=${service.id}`
-    );
-  };
+  let url = `/customer/bookings/new?category=${encodeURIComponent(
+    category
+  )}&service=${encodeURIComponent(service.name)}&price=${encodeURIComponent(
+    service.price
+  )}&duration=${encodeURIComponent(service.duration)}`;
+
+  if (emergency === "true") {
+    url += "&emergency=true";
+  }
+
+  router.push(url);
+};
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">

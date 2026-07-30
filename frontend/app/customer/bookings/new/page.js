@@ -1,29 +1,83 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, Suspense,useEffect } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Calendar,
   Clock,
-  Upload,
   FileText,
   Wrench,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
-function BookingPageContent() {
+import { auth, db } from '../../../../lib/firebase/firebase';
+
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  limit,
+} from 'firebase/firestore';
+
+export default function BookingPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const emergency = searchParams.get("emergency");
+  const [formData, setFormData] = useState({
+  description: "",
+  date: "",
+  timeSlot: "",
+  requestPreviousTechnician: false,
+  isEmergency: false,
+  notes: "",
+});
+useEffect(() => {
+  if (emergency === "true") {
+    setFormData((prev) => ({
+      ...prev,
+      isEmergency: true,
+    }));
+  }
+}, [emergency]);
 
   const category = searchParams.get('category');
   const service = searchParams.get('service');
+  const price = searchParams.get('price');
+  const duration = searchParams.get('duration');
 
-  const [formData, setFormData] = useState({
-    description: '',
-    date: '',
-    timeSlot: '',
-    images: [],
-    requestPreviousTechnician: false,
-    notes: '',
-  });
+  const [loading, setLoading] = useState(false);
+  const [hasPreviousTechnician, setHasPreviousTechnician] = useState(false);
+
+ useEffect(() => {
+  const checkPreviousTechnician = async () => {
+    const user = auth.currentUser;
+
+    if (!user || !category) return;
+
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("customerId", "==", user.uid),
+        where("category", "==", category),
+        where("status", "==", "Completed"),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(q);
+
+      setHasPreviousTechnician(!snapshot.empty);
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  checkPreviousTechnician();
+}, [category]);
 
   const timeSlots = [
     '09:00 AM - 11:00 AM',
@@ -33,50 +87,143 @@ function BookingPageContent() {
   ];
 
   const handleChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+    const { name, value, type, checked } = e.target;
 
-    if (type === 'checkbox') {
-      setFormData({
-        ...formData,
-        [name]: checked,
-      });
-    } else if (type === 'file') {
-      setFormData({
-        ...formData,
-        images: [...files],
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    console.log({
-      category,
-      service,
-      ...formData,
-    });
+    const user = auth.currentUser;
 
-    alert('Booking Submitted Successfully!');
+    if (!user) {
+      alert('Please login again.');
+      return;
+    }
+
+   if (!formData.isEmergency) {
+  if (!formData.date) {
+    alert("Please select a preferred date.");
+    return;
+  }
+
+  if (!formData.timeSlot) {
+    alert("Please select a time slot.");
+    return;
+  }
+}
+
+    setLoading(true);
+
+    try {
+      const bookingData = {
+        customerId: user.uid,
+        customerName: user.displayName || '',
+        customerEmail: user.email,
+
+        category,
+        service,
+        price,
+        duration,
+
+        description: formData.description,
+        date: formData.isEmergency ? null : formData.date,
+timeSlot: formData.isEmergency ? null : formData.timeSlot,
+
+        requestPreviousTechnician:
+          formData.requestPreviousTechnician,
+
+        isEmergency: formData.isEmergency,
+
+        notes: formData.notes,
+
+        status: formData.isEmergency
+          ? 'Emergency Pending'
+          : 'Pending',
+
+        technicianId: null,
+        dispatcherId: null,
+
+        createdAt: serverTimestamp(),
+      };
+
+      if (formData.isEmergency) {
+        await addDoc(
+          collection(db, 'emergencyBookings'),
+          bookingData
+        );
+      } else {
+        await addDoc(
+          collection(db, 'bookings'),
+          bookingData
+        );
+      }
+
+      alert('Booking submitted successfully.');
+
+      router.push('/customer/bookings');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to submit booking.');
+    } finally {
+      setLoading(false);
+    }
   };
+    return (
+      <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
 
-  return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <main className="min-h-screen bg-slate-50 py-10">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
 
       <h1 className="text-3xl font-bold text-[#0A2540] mb-2">
         Book Service
       </h1>
 
-      <p className="text-slate-600 mb-8">
-        Category: <span className="font-semibold text-blue-600">{category || 'General'}</span>
-      </p>
+        {/* Service Details */}
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-md border border-slate-200 space-y-6">
+        <div className="bg-slate-100 rounded-xl p-6 mb-8">
+
+          <h2 className="text-xl font-bold flex items-center gap-2 text-[#0A2540]">
+            <Wrench size={22} />
+            Service Details
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+
+            <div>
+              <p className="text-gray-500">Category</p>
+              <p className="font-semibold">{category}</p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Service</p>
+              <p className="font-semibold">{service}</p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Estimated Price</p>
+              <p className="font-semibold text-green-600">
+                ₹{price}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-gray-500">Estimated Duration</p>
+              <p className="font-semibold">{duration}</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-7"
+        >
 
         {/* Issue Description */}
         <div>
@@ -94,134 +241,189 @@ function BookingPageContent() {
               value={formData.description}
               onChange={handleChange}
               placeholder="Describe the issue in detail..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
-            />
-          </div>
-        </div>
-
-        {/* Schedule Date */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Preferred Date
-          </label>
-
-          <div className="relative">
-            <Calendar className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
-
-            <input
-              type="date"
-              name="date"
               required
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
+              className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
             />
           </div>
-        </div>
 
-        {/* Preferred Time Slot */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Preferred Time Slot
-          </label>
+          {/* Preferred Date */}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {timeSlots.map((slot) => (
-              <label
-                key={slot}
-                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${
-                  formData.timeSlot === slot
-                    ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
-                    : 'border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="timeSlot"
-                  value={slot}
-                  checked={formData.timeSlot === slot}
-                  onChange={handleChange}
-                  className="accent-blue-600"
-                />
+          {!formData.isEmergency && (
+  <div>
 
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span className="text-sm">{slot}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+    <label className="font-semibold flex items-center gap-2 mb-2">
+      <Calendar size={18} />
+      Preferred Date
+    </label>
 
-        {/* Upload Images */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Upload Images / Photos of Issue (Optional)
-          </label>
+    <input
+      type="date"
+      name="date"
+      value={formData.date}
+      onChange={handleChange}
+      required
+      className="w-full border rounded-xl p-3"
+    />
 
-          <div className="relative border-2 border-dashed border-slate-300 p-6 rounded-lg text-center hover:border-blue-600 transition">
-            <Upload className="mx-auto text-slate-400 w-8 h-8 mb-2" />
+  </div>
+)}
 
-            <input
-              type="file"
-              multiple
-              onChange={handleChange}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
+          {/* Time Slots */}
 
-            <p className="text-sm text-slate-600">
-              Click or drag files to upload
-            </p>
-          </div>
-        </div>
+          {!formData.isEmergency && (
+  <div>
 
-        {/* Request Previous Technician */}
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            name="requestPreviousTechnician"
-            id="previousTech"
-            checked={formData.requestPreviousTechnician}
-            onChange={handleChange}
-            className="w-4 h-4 accent-blue-600"
-          />
+    <label className="font-semibold flex items-center gap-2 mb-3">
+      <Clock size={18} />
+      Select Time Slot
+    </label>
 
-          <label htmlFor="previousTech" className="text-sm text-slate-700 font-medium">
-            Request Previous Technician if Available
-          </label>
-        </div>
+    <div className="grid md:grid-cols-2 gap-4">
 
-        {/* Special Instructions */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Special Instructions / Gate Code / Notes
-          </label>
+      {timeSlots.map((slot) => (
 
-          <input
-            type="text"
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Gate code, parking notes, etc."
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 text-slate-800"
-          />
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          className="w-full bg-[#0A2540] hover:bg-blue-900 text-white font-semibold py-3 rounded-lg transition"
+        <label
+          key={slot}
+          className={`border rounded-xl p-4 cursor-pointer transition ${
+            formData.timeSlot === slot
+              ? "border-[#0A2540] bg-blue-50"
+              : "hover:border-[#0A2540]"
+          }`}
         >
-          Confirm Booking
-        </button>
 
-      </form>
+          <input
+            type="radio"
+            name="timeSlot"
+            value={slot}
+            checked={formData.timeSlot === slot}
+            onChange={handleChange}
+            className="mr-3"
+          />
+
+          {slot}
+
+        </label>
+
+      ))}
+
     </div>
-  );
-}
 
-export default function BookingPage() {
-  return (
-    <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
-      <BookingPageContent />
-    </Suspense>
+  </div>
+)}
+        
+                    {/* Request Previous Technician */}
+
+          {hasPreviousTechnician && (
+  <div className="border rounded-xl p-5">
+
+    <div className="flex items-start gap-3">
+
+      <input
+        type="checkbox"
+        name="requestPreviousTechnician"
+        checked={formData.requestPreviousTechnician}
+        onChange={handleChange}
+        className="mt-1 w-5 h-5 accent-[#0A2540]"
+      />
+
+      <div>
+
+        <label className="font-semibold text-[#0A2540]">
+          Request Previous Technician
+        </label>
+
+        <p className="text-sm text-gray-500 mt-1">
+          We'll try to assign the technician who previously worked on your
+          {` ${category}`} service.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
+{!hasPreviousTechnician && (
+  <div className="border rounded-xl p-5 bg-gray-50">
+
+    <p className="text-gray-600 text-sm">
+      Previous technician requests become available after you complete at least
+      one <strong>{category}</strong> service.
+    </p>
+
+  </div>
+)}
+
+          {/* Emergency Service */}
+
+          <div className="border border-red-300 bg-red-50 rounded-xl p-5">
+
+            <div className="flex items-start gap-3">
+
+              <input
+  type="checkbox"
+  name="isEmergency"
+  checked={formData.isEmergency}
+  onChange={handleChange}
+  disabled={emergency === "true"}
+  className="mt-1 w-5 h-5 accent-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+/>
+
+              <div>
+
+                <div className="flex items-center gap-2">
+
+                  <AlertTriangle
+                    size={20}
+                    className="text-red-600"
+                  />
+
+                  <label className="font-semibold text-red-700">
+                    Emergency Service
+                  </label>
+
+                </div>
+
+                <p className="text-sm text-red-600 mt-2">
+                  Emergency requests are immediately forwarded to the
+                  dispatcher for faster assignment.
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          
+
+          {/* Submit Button */}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#0A2540] hover:bg-[#163B63] text-white py-4 rounded-xl font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-3"
+          >
+
+            {loading ? (
+              <>
+                <Loader2
+                  className="animate-spin"
+                  size={20}
+                />
+                Submitting Booking...
+              </>
+            ) : (
+              'Confirm Booking'
+            )}
+
+          </button>
+
+        </form>
+
+      </div>
+
+    </main>
+     </Suspense>
   );
 }
