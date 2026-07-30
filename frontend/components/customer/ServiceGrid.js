@@ -62,43 +62,46 @@ export default function ServiceGrid() {
   return (
     <section>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {services.map((service) => {
-          const Icon = service.icon;
+            {services.map((service, index) => {
+      const Icon = service.icon;
 
-          return (
-            <div
-              key={service.title}
-              className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200 overflow-hidden group"
-            >
-              <div className="p-6">
-                <div className="w-16 h-16 rounded-2xl bg-[#0A2540]/10 flex items-center justify-center mb-5">
-                  <Icon
-                    size={34}
-                    className="text-[#0A2540]"
-                  />
-                </div>
-
-                <h3 className="text-xl font-bold text-[#0A2540]">
-                  {service.title}
-                </h3>
-
-                <p className="text-slate-600 mt-3 leading-7">
-                  {service.description}
-                </p>
-
-                <button
-                  onClick={() =>
-                    handleServiceClick(service.title)
-                  }
-                  className="mt-6 flex items-center gap-2 text-[#0A2540] font-semibold group-hover:gap-3 transition-all"
-                >
-                  Explore Service
-                  <ArrowRight size={18} />
-                </button>
-              </div>
+      return (
+        <div
+          key={service.title}
+          className={`bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200 overflow-hidden group
+          ${
+            index === services.length - 1
+              ? 'md:col-span-2 xl:col-start-2 xl:col-span-1'
+              : ''
+          }`}
+        >
+          <div className="p-6">
+            <div className="w-16 h-16 rounded-2xl bg-[#0A2540]/10 flex items-center justify-center mb-5">
+              <Icon
+                size={34}
+                className="text-[#0A2540]"
+              />
             </div>
-          );
-        })}
+
+            <h3 className="text-xl font-bold text-[#0A2540]">
+              {service.title}
+            </h3>
+
+            <p className="text-slate-600 mt-3 leading-7">
+              {service.description}
+            </p>
+
+            <button
+              onClick={() => handleServiceClick(service.title)}
+              className="mt-6 flex items-center gap-2 text-[#0A2540] font-semibold group-hover:gap-3 transition-all"
+            >
+              Explore Service
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      );
+    })}
       </div>
     </section>
   );
