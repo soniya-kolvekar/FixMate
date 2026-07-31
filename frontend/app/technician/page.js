@@ -116,7 +116,11 @@ export default function TechnicianModulePage() {
               (data.assignedTechName && data.assignedTechName.toLowerCase() === techName.toLowerCase()) ||
               (data.technicianName && data.technicianName.toLowerCase() === techName.toLowerCase()) ||
               (data.assignedTo && (data.assignedTo.toLowerCase() === techName.toLowerCase() || data.assignedTo === techUid)) ||
-              (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase());
+              (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase()) ||
+              (data.recommendedTech && data.recommendedTech.toLowerCase() === techName.toLowerCase()) ||
+              (data.assignedTech && data.assignedTech.toLowerCase() === techName.toLowerCase()) ||
+              (data.technician && data.technician.toLowerCase() === techName.toLowerCase()) ||
+              (data.status === 'Assigned' && (!data.technicianName || data.technicianName.toLowerCase() === techName.toLowerCase()));
 
             const isEmg = Boolean(
               data.isEmergency === true ||
@@ -145,10 +149,14 @@ export default function TechnicianModulePage() {
                   data.status === 'Cancelled' || 
                   data.status === 'CANCELLED' || 
                   data.status === 'cancelled' ||
-                  (typeof data.status === 'string' && data.status.toLowerCase().includes('cancel')) ||
-                  Boolean(data.cancellationReason)
+                  (typeof data.status === 'string' && data.status.toLowerCase().includes('cancel'))
                 ) ? 'Cancelled' : (data.status || 'Assigned'),
-                cancellationReason: data.cancellationReason || data.notes || '',
+                cancellationReason: (
+                  data.status === 'Cancelled' || 
+                  data.status === 'CANCELLED' || 
+                  data.status === 'cancelled' ||
+                  (typeof data.status === 'string' && data.status.toLowerCase().includes('cancel'))
+                ) ? (data.cancellationReason || '') : '',
                 description: data.description || data.notes || data.customerNote || 'Customer reported issue requiring on-site technician inspection.',
                 extraCharges: Number(data.extraCharges || 0),
                 extraChargesReason: data.extraChargesReason || '',
@@ -161,7 +169,7 @@ export default function TechnicianModulePage() {
                 const isCancelledByAlert = (() => {
                   try {
                     const alerts = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-                    return alerts.some(a => (a.jobId === formattedJob.id || a.id === formattedJob.id) && (a.category === 'CANCELLATION' || a.priority === 'Priority Level 10'));
+                    return alerts.some(a => (a.jobId === formattedJob.id || a.id === formattedJob.id) && (a.category === 'CANCELLATION' || a.status === 'Cancelled' || a.type === 'CANCELLATION'));
                   } catch(e) { return false; }
                 })();
 
@@ -238,6 +246,66 @@ export default function TechnicianModulePage() {
           else setEmergencyList([]);
         }, (err) => console.warn('Emergency bookings snapshot warning:', err));
 
+        // 6. Sync assigned jobs from localStorage & window custom events
+        const syncLocalAssignedJobs = () => {
+          try {
+            const localAssigned = JSON.parse(localStorage.getItem('fixmate_assigned_jobs') || '[]');
+            const techName = currentUser?.name || 'Rajesh Kumar';
+            const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+
+            localAssigned.forEach(data => {
+              const isAssignedToMe = 
+                (data.assignedTechId && data.assignedTechId === techUid) ||
+                (data.technicianId && data.technicianId === techUid) ||
+                (data.assignedTechName && data.assignedTechName.toLowerCase() === techName.toLowerCase()) ||
+                (data.technicianName && data.technicianName.toLowerCase() === techName.toLowerCase()) ||
+                (data.assignedTo && (data.assignedTo.toLowerCase() === techName.toLowerCase() || data.assignedTo === techUid)) ||
+                (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase()) ||
+                (data.recommendedTech && data.recommendedTech.toLowerCase() === techName.toLowerCase()) ||
+                (data.assignedTech && data.assignedTech.toLowerCase() === techName.toLowerCase()) ||
+                (data.technician && data.technician.toLowerCase() === techName.toLowerCase()) ||
+                (data.status === 'Assigned');
+
+              if (isAssignedToMe && data.id) {
+                const formattedJob = {
+                  id: data.id || data.jobId,
+                  title: data.title || data.serviceName || data.category || 'Service Request',
+                  tag: data.isEmergency ? 'EMERGENCY' : (data.tag || 'STANDARD'),
+                  category: data.category || data.serviceCategory || 'Plumbing',
+                  time: data.time || data.scheduledTime || data.date || '09:30 AM',
+                  location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                  customerName: data.customerName || data.customer || 'Customer',
+                  customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+                  customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
+                  price: Number(data.price || data.cost || 499),
+                  status: (data.status === 'Cancelled' || data.status === 'CANCELLED' || data.status === 'cancelled') ? 'Cancelled' : (data.status || 'Assigned'),
+                  cancellationReason: (data.status === 'Cancelled' || data.status === 'CANCELLED' || data.status === 'cancelled') ? (data.cancellationReason || '') : '',
+                  description: data.description || data.notes || data.customerNote || 'Customer reported issue requiring on-site technician inspection.',
+                  extraCharges: Number(data.extraCharges || 0),
+                  extraChargesReason: data.extraChargesReason || '',
+                  isEmergency: Boolean(data.isEmergency),
+                  images: data.images || (data.imageUrl ? [data.imageUrl] : []),
+                  assignedTechName: data.assignedTechName || techName
+                };
+
+                setJobs(prev => {
+                  const index = prev.findIndex(j => j.id === formattedJob.id);
+                  if (index !== -1) {
+                    const updated = [...prev];
+                    updated[index] = { ...updated[index], ...formattedJob };
+                    return updated;
+                  }
+                  return [formattedJob, ...prev];
+                });
+              }
+            });
+          } catch(e) {}
+        };
+
+        syncLocalAssignedJobs();
+        window.addEventListener('fixmate_job_assigned', syncLocalAssignedJobs);
+        window.addEventListener('fixmate_dispatch_updated', syncLocalAssignedJobs);
+
       } catch(e) {
         console.warn('Firestore jobs live fetch error:', e);
       }
@@ -266,7 +334,8 @@ export default function TechnicianModulePage() {
     const isCancelledJob = (j) => 
       j.status === 'Cancelled' || 
       j.status === 'CANCELLED' || 
-      Boolean(j.cancellationReason);
+      j.status === 'cancelled' ||
+      (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel'));
 
     const emgNotifs = emergencyList.map(e => ({
       id: `emg-${e.id}`,

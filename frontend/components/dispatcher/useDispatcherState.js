@@ -137,16 +137,16 @@ export default function useDispatcherState() {
         
         let status = 'UNASSIGNED';
         const s = rawStatus.toUpperCase();
-        if (s.includes('PENDING')) {
+        if (s.includes('PENDING') || s === 'UNASSIGNED') {
           status = 'UNASSIGNED';
-        } else if (s.includes('ASSIGNED') || s.includes('ACCEPTED')) {
-          status = 'ASSIGNED';
-        } else if (s.includes('IN PROGRESS') || s.includes('IN-PROGRESS') || s.includes('PROGRESS')) {
-          status = 'IN-PROGRESS';
-        } else if (s.includes('COMPLETED')) {
+        } else if (s.includes('COMPLETED') || s.includes('FINISHED') || s.includes('DONE')) {
           status = 'COMPLETED';
         } else if (s.includes('CANCEL')) {
           status = 'CANCELLED';
+        } else if (s.includes('WAY') || s.includes('REACHED') || s.includes('START') || s.includes('PROGRESS') || s.includes('ACTIVE') || s.includes('TRANSIT')) {
+          status = 'IN-PROGRESS';
+        } else {
+          status = 'ASSIGNED';
         }
         
         const serviceType = getServiceType(data.category, data.service);
@@ -163,7 +163,7 @@ export default function useDispatcherState() {
           location: data.address || data.location || 'Mangaluru',
           color: getServiceColor(serviceType),
           icon: getServiceIcon(serviceType),
-          assignedTech: data.technicianName || data.assignedTech || null,
+          assignedTech: data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || data.recommendedTech || null,
           isEmergency,
           collectionName: isEmergency ? 'emergencyBookings' : 'bookings',
           createdAt: data.createdAt
@@ -172,6 +172,11 @@ export default function useDispatcherState() {
       
       bookingsList.forEach(item => combined.push(mapItem(item, false)));
       emergencyList.forEach(item => combined.push(mapItem(item, true)));
+      jobsList.forEach(item => {
+        if (!combined.some(c => c.id === item.id)) {
+          combined.push(mapItem(item, false));
+        }
+      });
       
       // Sort by createdAt descending
       combined.sort((a, b) => {
@@ -182,6 +187,8 @@ export default function useDispatcherState() {
       
       setRequests(combined);
     };
+
+    let jobsList = [];
 
     try {
       const bookingsRef = collection(db, 'bookings');
@@ -203,9 +210,30 @@ export default function useDispatcherState() {
       console.warn('Error listening to emergency bookings:', e);
     }
 
+    let unsubJobs = null;
+    try {
+      const jobsRef = collection(db, 'jobs');
+      unsubJobs = onSnapshot(jobsRef, (snapshot) => {
+        jobsList = snapshot.docs;
+        processLists();
+      }, (err) => console.warn('Jobs subscription warning:', err));
+    } catch (e) {
+      console.warn('Error listening to jobs:', e);
+    }
+
+    const handleStatusUpdateEvent = (e) => {
+      const detail = e.detail;
+      if (detail && detail.id && detail.status) {
+        setRequests(prev => prev.map(r => r.id === detail.id ? { ...r, rawStatus: detail.status, status: detail.status.toUpperCase().includes('COMPLET') ? 'COMPLETED' : detail.status.toUpperCase().includes('CANCEL') ? 'CANCELLED' : detail.status.toUpperCase().includes('ASSIGN') || detail.status.toUpperCase().includes('ACCEPT') ? 'ASSIGNED' : 'IN-PROGRESS' } : r));
+      }
+    };
+    window.addEventListener('fixmate_job_status_updated', handleStatusUpdateEvent);
+
     return () => {
       if (unsubBookings) unsubBookings();
       if (unsubEmergency) unsubEmergency();
+      if (unsubJobs) unsubJobs();
+      window.removeEventListener('fixmate_job_status_updated', handleStatusUpdateEvent);
     };
   }, []);
 
@@ -239,9 +267,20 @@ export default function useDispatcherState() {
   }, [requests]);
 
   const pendingEmergenciesCount = useMemo(() => {
-    const fromRequests = requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED').length;
-    const fromDispatches = dispatches.filter(d => (d.priority && d.priority.includes('10')) || d.type === 'URGENT' || d.category === 'CANCELLATION').length;
-    return fromRequests + fromDispatches;
+    const unassignedEmergencyRequests = requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED');
+    const emergencyDispatchItems = dispatches.filter(d => 
+      (d.priority && (d.priority.includes('10') || d.priority.includes('9') || d.priority.includes('8'))) ||
+      d.type === 'URGENT' || 
+      d.category === 'CANCELLATION' ||
+      d.isEmergency
+    );
+
+    const uniqueEmergencyIds = new Set([
+      ...unassignedEmergencyRequests.map(r => r.id),
+      ...emergencyDispatchItems.map(d => d.id || d.jobId)
+    ]);
+
+    return uniqueEmergencyIds.size;
   }, [requests, dispatches]);
 
   const emergencyRequests = useMemo(() => {
@@ -289,62 +328,77 @@ export default function useDispatcherState() {
   
 
 
-  // Dynamic fetching of Urgent Broadcasts from API, Firestore & LocalStorage
-  const fetchDispatches = async () => {
-    try {
-      const res = await fetch('http://localhost:5000/api/dispatches');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-        const combined = [...localData, ...data.data];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-        setDispatches(unique);
-        return;
-      }
-    } catch (e) {
-      const localData = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-      if (localData.length > 0) {
-        setDispatches(localData);
-      }
-    }
-  };
-
+  // Dynamic real-time subscription for Urgent Broadcasts from Firebase & LocalStorage
   useEffect(() => {
-    let unsubFirestore = null;
+    let unsubDispatches = null;
+    let unsubEmergencyBookings = null;
+
+    let firestoreDispatches = [];
+    let firestoreEmergencyBookings = [];
+
+    const syncDispatchesFeed = () => {
+      const emgItems = firestoreEmergencyBookings.map(d => {
+        const data = d.data();
+        const isUnassigned = !data.status || data.status.toUpperCase().includes('PENDING') || data.status === 'UNASSIGNED';
+        if (!isUnassigned) return null;
+        return {
+          id: d.id,
+          title: data.title || data.serviceName || `${data.category || 'Emergency'} Service Request`,
+          time: data.time || 'Live Broadcast',
+          address: data.address || data.location || 'Mangaluru',
+          priority: 'Priority Level 10',
+          category: (data.category || data.serviceCategory || data.service || 'EMERGENCY').toUpperCase(),
+          type: 'URGENT',
+          icon: '⚡',
+          colorClass: 'bg-rose-50 border-rose-100 hover:border-rose-300',
+          iconBg: 'bg-rose-100 text-rose-600',
+          recommendedTech: data.recommendedTech || data.assignedTech || 'Rajesh Kumar',
+          techSpecialty: data.category || 'Emergency',
+          distance: data.distance || '1.2 km away',
+          price: data.price ? String(data.price) : '1499.00',
+          customerName: data.customerName || data.customer || 'Customer',
+          targetDispatcher: DISPATCHER_EMAIL,
+          isEmergency: true
+        };
+      }).filter(Boolean);
+
+      const localData = (() => {
+        try { return JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]'); }
+        catch(e) { return []; }
+      })();
+
+      const combined = [...firestoreDispatches, ...emgItems, ...localData];
+      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      setDispatches(unique);
+    };
+
     try {
       const dispatchesRef = collection(db, 'dispatches');
-      unsubFirestore = onSnapshot(dispatchesRef, (snapshot) => {
-        if (!snapshot.empty) {
-          const firestoreItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          setDispatches(prev => {
-            const combined = [...firestoreItems, ...prev];
-            const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-            return unique;
-          });
-
-          // Toast alert for newly arrived cancellation / delay alert
-          const latestAlert = firestoreItems[0];
-          if (latestAlert && latestAlert.reasonType) {
-            showToast(`🚨 REAL-TIME ALERT (${latestAlert.reasonType}): Technician reported issue on #${latestAlert.jobId || latestAlert.id}!`);
-          }
-        }
-      }, (err) => {
-        console.warn('Firestore subscription warning:', err);
-      });
+      unsubDispatches = onSnapshot(dispatchesRef, (snapshot) => {
+        firestoreDispatches = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        syncDispatchesFeed();
+      }, (err) => console.warn('Dispatches subscription warning:', err));
     } catch(err) {
-      console.warn('Firestore error:', err);
+      console.warn('Dispatches error:', err);
     }
 
-    fetchDispatches();
-    const interval = setInterval(fetchDispatches, 2500);
-    const handleSync = () => fetchDispatches();
+    try {
+      const emgRef = collection(db, 'emergencyBookings');
+      unsubEmergencyBookings = onSnapshot(emgRef, (snapshot) => {
+        firestoreEmergencyBookings = snapshot.docs;
+        syncDispatchesFeed();
+      }, (err) => console.warn('Emergency bookings subscription warning:', err));
+    } catch(err) {
+      console.warn('Emergency bookings error:', err);
+    }
 
+    const handleSync = () => syncDispatchesFeed();
     window.addEventListener('storage', handleSync);
     window.addEventListener('fixmate_dispatch_updated', handleSync);
 
     return () => {
-      if (unsubFirestore) unsubFirestore();
-      clearInterval(interval);
+      if (unsubDispatches) unsubDispatches();
+      if (unsubEmergencyBookings) unsubEmergencyBookings();
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('fixmate_dispatch_updated', handleSync);
     };
@@ -421,12 +475,31 @@ export default function useDispatcherState() {
     return onlineTechs.map((tech) => {
       // Find active request if any
       const activeRequest = requests.find(r => 
-        (r.assignedTech === tech.name) && 
-        (r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS')
+        (r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS') &&
+        (
+          !r.assignedTech ||
+          r.assignedTech.toLowerCase() === tech.name.toLowerCase() ||
+          tech.name.toLowerCase().includes(r.assignedTech.toLowerCase()) ||
+          r.assignedTech.toLowerCase().includes(tech.name.toLowerCase()) ||
+          onlineTechs.length === 1
+        )
       );
 
+      // Check localStorage for recent real-time status update override
+      const lastStatusUpdate = (() => {
+        try {
+          const raw = localStorage.getItem('fixmate_last_job_status_update');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.status) return parsed.status;
+          }
+        } catch(e) {}
+        return null;
+      })();
+
+      const currentStatus = lastStatusUpdate || activeRequest?.rawStatus || activeRequest?.status || tech.status || 'Assigned';
       const hashValue = hashStr(tech.id || tech.name);
-      const isBusy = tech.status === 'Busy' || (activeRequest && activeRequest.status === 'IN-PROGRESS');
+      const isCompleted = currentStatus === 'Completed' || currentStatus === 'COMPLETED';
 
       // Coordinate placement in SVG grid (cx: 150-650, cy: 150-500)
       const cx = 150 + (hashValue % 500);
@@ -438,35 +511,19 @@ export default function useDispatcherState() {
       const defaultLoc = locations[hashValue % locations.length];
       const destLoc = locations[(hashValue + 1) % locations.length];
 
-      if (isBusy) {
-        return {
-          id: tech.id,
-          name: tech.name,
-          role: tech.specialty,
-          eta: null,
-          destination: activeRequest ? activeRequest.location : destLoc,
-          currentLocation: activeRequest ? activeRequest.location : defaultLoc,
-          status: 'Service Started',
-          progress: 30 + (hashValue % 50), // Dynamic progress (30% - 80%)
-          initials,
-          cx,
-          cy
-        };
-      } else {
-        return {
-          id: tech.id,
-          name: tech.name,
-          role: tech.specialty,
-          eta: `${5 + (hashValue % 15)} MIN`, // Dynamic ETA (5 - 20 min)
-          destination: activeRequest ? activeRequest.location : destLoc,
-          currentLocation: defaultLoc,
-          status: 'On the Way',
-          progress: null,
-          initials,
-          cx,
-          cy
-        };
-      }
+      return {
+        id: tech.id,
+        name: tech.name,
+        role: tech.specialty || tech.specialization || 'Technician',
+        eta: (currentStatus.toLowerCase().includes('way') || currentStatus.toLowerCase().includes('assign') || currentStatus.toLowerCase().includes('accept')) ? `${5 + (hashValue % 15)} MIN` : null,
+        destination: activeRequest ? activeRequest.location : destLoc,
+        currentLocation: activeRequest ? activeRequest.location : defaultLoc,
+        status: currentStatus,
+        progress: isCompleted ? 100 : currentStatus.toLowerCase().includes('start') ? 75 : currentStatus.toLowerCase().includes('reach') ? 50 : 25,
+        initials,
+        cx,
+        cy
+      };
     });
   }, [technicians, requests]);
 
@@ -708,44 +765,60 @@ export default function useDispatcherState() {
     // Find if there is a corresponding booking in requests
     const requestItem = requests.find(r => r.id === assigningDispatch.id || r.id === assigningDispatch.reqId);
     const selectedTech = technicians.find(t => t.name === techName);
+    const targetId = requestItem?.id || assigningDispatch.id || `JOB-${Date.now()}`;
 
-    if (requestItem) {
-      const colName = requestItem.collectionName || (requestItem.isEmergency ? 'emergencyBookings' : 'bookings');
-      const bookingRef = doc(db, colName, requestItem.id);
-      
-      const updatePayload = {
-        status: 'Assigned',
-        technicianId: selectedTech?.id || selectedTech?.uid || 'tech_rajesh_kumar',
-        technicianName: techName,
-        technicianPhone: selectedTech?.phone || '+91 98765 43210',
-        updatedAt: new Date().toISOString()
-      };
-      
-      try {
-        await updateDoc(bookingRef, updatePayload);
-        
-        // Also update/set doc in jobs collection
-        const jobPayload = {
-          id: requestItem.id,
-          jobId: requestItem.id,
-          status: 'Assigned',
-          technicianName: techName,
-          technicianPhone: selectedTech?.phone || '+91 98765 43210',
-          title: assigningDispatch.title || `${requestItem.service} request`,
-          customerName: requestItem.customer || 'Customer',
-          location: requestItem.location || 'Mangaluru',
-          updatedAt: new Date().toISOString()
-        };
-        await setDoc(doc(db, 'jobs', requestItem.id), jobPayload, { merge: true });
+    const jobPayload = {
+      id: targetId,
+      jobId: targetId,
+      status: 'Assigned',
+      technicianId: selectedTech?.id || selectedTech?.uid || 'tech_rajesh_kumar',
+      technicianName: techName,
+      assignedTechName: techName,
+      technicianPhone: selectedTech?.phone || '+91 98765 43210',
+      title: assigningDispatch.title || requestItem?.service || requestItem?.title || 'Service Request',
+      category: assigningDispatch.category || requestItem?.service || 'Plumbing',
+      location: assigningDispatch.address || assigningDispatch.location || requestItem?.location || 'Kodialbail & Hampankatta, Mangaluru',
+      customerName: assigningDispatch.customerName || requestItem?.customer || 'Customer',
+      customerPhone: assigningDispatch.customerPhone || requestItem?.phone || '+91 98123 45678',
+      price: Number(assigningDispatch.price || requestItem?.price || 499),
+      isEmergency: Boolean(assigningDispatch.priority?.includes('10') || requestItem?.isEmergency),
+      description: assigningDispatch.notes || requestItem?.notes || 'Assigned by Dispatcher',
+      time: assigningDispatch.time || '09:30 AM',
+      assignedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      updatedAt: new Date().toISOString()
+    };
 
-        // Update technician's assigned jobs count in Firestore
-        if (selectedTech && selectedTech.id) {
-          const techRef = doc(db, 'technicians', selectedTech.id);
-          await setDoc(techRef, { assignedJobsCount: (selectedTech.assigned || 0) + 1 }, { merge: true });
-        }
-      } catch (err) {
-        console.error("Error setting assignment in Firestore:", err);
+    try {
+      if (requestItem) {
+        const colName = requestItem.collectionName || (requestItem.isEmergency ? 'emergencyBookings' : 'bookings');
+        await setDoc(doc(db, colName, targetId), jobPayload, { merge: true });
       }
+      await setDoc(doc(db, 'jobs', targetId), jobPayload, { merge: true });
+      await setDoc(doc(db, 'bookings', targetId), jobPayload, { merge: true });
+
+      // Save to localStorage fixmate_assigned_jobs for instant cross-tab sync
+      const existingLocal = JSON.parse(localStorage.getItem('fixmate_assigned_jobs') || '[]');
+      const updatedLocal = [jobPayload, ...existingLocal.filter(j => j.id !== targetId)];
+      localStorage.setItem('fixmate_assigned_jobs', JSON.stringify(updatedLocal));
+
+      // Dispatch custom events
+      window.dispatchEvent(new CustomEvent('fixmate_job_assigned', { detail: jobPayload }));
+      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+
+      // Sync with backend API
+      fetch('http://localhost:5000/api/bookings/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobPayload)
+      }).catch(() => {});
+
+      // Update technician's assigned jobs count in Firestore
+      if (selectedTech && selectedTech.id) {
+        const techRef = doc(db, 'technicians', selectedTech.id);
+        await setDoc(techRef, { assignedJobsCount: (selectedTech.assigned || 0) + 1 }, { merge: true });
+      }
+    } catch (err) {
+      console.error("Error setting assignment in Firestore/backend:", err);
     }
 
     const newActivity = {

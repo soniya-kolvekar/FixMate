@@ -150,6 +150,7 @@ export default function LiveMapTab({
             {(() => {
               const stepperSteps = [
                 { label: 'Assigned', title: 'Technician Assigned', desc: 'Technician has been allocated to the service request.' },
+                { label: 'Accepted', title: 'Job Accepted', desc: 'Technician has accepted the service request.' },
                 { label: 'On The Way', title: 'On the Way', desc: 'Technician is traveling to your location.' },
                 { label: 'Reached Location', title: 'Reached Location', desc: 'Technician has arrived at the service address.' },
                 { label: 'Service Started', title: 'Service In-Progress', desc: 'Technician is actively working on resolving the issue.' },
@@ -157,13 +158,14 @@ export default function LiveMapTab({
               ];
 
               const getStepIndex = (status) => {
-                const s = (status || '').toLowerCase();
-                if (s.includes('assign') || s.includes('accept')) return 0;
-                if (s.includes('way') || s.includes('transit') || s.includes('enroute')) return 1;
-                if (s.includes('reach') || s.includes('arrive')) return 2;
-                if (s.includes('start') || s.includes('progress') || s.includes('active')) return 3;
-                if (s.includes('complete') || s.includes('done')) return 4;
-                return 1;
+                const s = (status || '').toLowerCase().trim();
+                if (s.startsWith('6') || s === 'completed' || s.includes('complete') || s.includes('done')) return 5;
+                if (s.startsWith('5') || s.includes('service started') || s.includes('started') || s.includes('progress')) return 4;
+                if (s.startsWith('4') || s.includes('reached location') || s.includes('reached') || s.includes('arrive')) return 3;
+                if (s.startsWith('3') || s.includes('on the way') || s.includes('way') || s.includes('transit') || s.includes('enroute')) return 2;
+                if (s.startsWith('2') || s.includes('accepted') || s.includes('accept')) return 1;
+                if (s.startsWith('1') || s.includes('assigned') || s.includes('assign')) return 0;
+                return 0;
               };
 
               const currentStep = getStepIndex(activeTech.status);
@@ -177,7 +179,7 @@ export default function LiveMapTab({
                     {/* Active Line Progress */}
                     <div 
                       className="absolute top-[15px] left-[10%] h-[3px] bg-blue-600 -z-10 rounded-full transition-all duration-700 ease-out"
-                      style={{ width: `${(currentStep / 4) * 80}%` }}
+                      style={{ width: `${(currentStep / 5) * 80}%` }}
                     ></div>
 
                     {/* Nodes flex */}

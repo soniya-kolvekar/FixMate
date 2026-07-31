@@ -21,7 +21,7 @@ export default function TechPerformance({
   const totalJobsCompleted = jobsCompletedToday; // Purely dynamic count of completed jobs
   const emergencyJobsAccepted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY' || j.category === 'Emergency') && j.status !== 'Cancelled').length;
   const emergencyJobsCompleted = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY' || j.category === 'Emergency') && j.status === 'Completed').length;
-  const cancellationCount = jobs.filter(j => j.status === 'Cancelled' || j.status === 'CANCELLED' || Boolean(j.cancellationReason)).length;
+  const cancellationCount = jobs.filter(j => j.status === 'Cancelled' || j.status === 'CANCELLED' || j.status === 'cancelled' || (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel'))).length;
   
   // Dynamic Monthly Payout Calculation based on COMPLETED jobs only
   const totalEarnings = (totalJobsCompleted * 499) + (emergencyJobsCompleted * 200);
