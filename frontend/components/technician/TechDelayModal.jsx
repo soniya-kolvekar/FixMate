@@ -43,7 +43,7 @@ export default function TechDelayModal({
           </div>
           <div>
             <h3 className="text-lg font-black text-[#0A2540]">Cancel Job Assignment</h3>
-            <p className="text-xs font-medium text-slate-500">Job #{job.id} • Urgent Dispatcher Alert</p>
+            <p className="text-xs font-medium text-slate-500">Urgent Dispatcher Alert</p>
           </div>
         </div>
 

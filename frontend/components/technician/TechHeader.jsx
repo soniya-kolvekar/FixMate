@@ -127,14 +127,14 @@ export default function TechHeader({
 
           </div>
 
-          {/* Right Action Tools: Duty, Notification, Emergency */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          {/* Right Action Tools: Duty Status & Notification Center */}
+          <div className="flex items-center gap-3 shrink-0">
             
             {/* 1. Duty Status Dropdown */}
             <div className="relative">
               <button 
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="flex items-center gap-2 border border-slate-200 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all shadow-sm whitespace-nowrap"
+                className="flex items-center gap-2 border border-slate-200/80 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#0B2545] bg-white hover:bg-[#EEF4ED]/50 transition-all shadow-xs whitespace-nowrap"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${
                   availability === 'ONLINE' || availability === 'Available'
@@ -148,7 +148,7 @@ export default function TechHeader({
               </button>
 
               {showStatusDropdown && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200/80 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200/80 rounded-2xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                   {[
                     { label: 'Available', statusKey: 'ONLINE', color: 'bg-emerald-500' },
                     { label: 'Busy', statusKey: 'BUSY', color: 'bg-amber-500' },
@@ -160,7 +160,7 @@ export default function TechHeader({
                         onToggleAvailability(st.statusKey);
                         setShowStatusDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
+                      className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0B2545] hover:bg-[#EEF4ED]/60 flex items-center gap-2.5"
                     >
                       <span className={`w-2.5 h-2.5 rounded-full ${st.color}`}></span>
                       <span>{st.label}</span>
@@ -170,37 +170,18 @@ export default function TechHeader({
               )}
             </div>
 
-            {/* 2. Notification Center Bell */}
+            {/* 2. Notification Center Bell Icon */}
             <button 
               onClick={() => setShowNotificationDrawer(true)}
-              className="relative text-slate-500 hover:text-regalNavy transition-colors p-2 rounded-xl hover:bg-slate-100/60"
+              className="relative text-slate-600 hover:text-[#134074] transition-colors p-2.5 rounded-xl border border-slate-200/80 bg-white hover:bg-[#EEF4ED]/50 shadow-xs flex items-center justify-center"
               title="Notifications"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4 text-[#0B2545]" />
               {notifications.length > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
                   {notifications.length}
                 </span>
               )}
-            </button>
-
-            {/* 3. Emergency Broadcast Trigger */}
-            <button 
-              onClick={onTriggerEmergency}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-extrabold hover:bg-rose-100 transition-colors shadow-sm whitespace-nowrap"
-            >
-              <ShieldAlert className="w-4 h-4 animate-bounce" />
-              <span className="hidden sm:inline">Emergency</span>
-            </button>
-
-            {/* 4. Log Out Button */}
-            <button 
-              onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all shadow-sm whitespace-nowrap"
-              title="Log Out"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden md:inline">Log Out</span>
             </button>
 
           </div>
@@ -210,17 +191,17 @@ export default function TechHeader({
 
       {/* Technician Notification Drawer */}
       {showNotificationDrawer && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between border-l border-slate-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between border-l border-slate-200/80">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-regalNavy" />
-                  <h3 className="text-base font-extrabold font-heading text-prussianBlue">Notification Center</h3>
+                  <Bell className="w-5 h-5 text-[#134074]" />
+                  <h3 className="text-base font-bold text-[#0B2545]">Notification Center</h3>
                 </div>
                 <button 
                   onClick={() => setShowNotificationDrawer(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-slate-400 hover:text-slate-600 p-1"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -228,17 +209,17 @@ export default function TechHeader({
 
               <div className="mt-4 space-y-3">
                 {notifications.length === 0 ? (
-                  <p className="text-xs font-semibold text-slate-400 text-center py-8">
+                  <p className="text-xs font-medium text-slate-400 text-center py-12">
                     No new notifications
                   </p>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className="p-3.5 rounded-2xl bg-mintCream/50 border border-slate-100 space-y-1">
+                    <div key={n.id} className="p-3.5 rounded-2xl bg-[#EEF4ED]/50 border border-slate-100 space-y-1">
                       <div className="flex justify-between items-start">
-                        <h5 className="text-xs font-extrabold text-prussianBlue">{n.title}</h5>
-                        <span className="text-[10px] font-bold text-slate-400">{n.time}</span>
+                        <h5 className="text-xs font-bold text-[#0B2545]">{n.title}</h5>
+                        <span className="text-[10px] font-semibold text-slate-400">{n.time}</span>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium">{n.message}</p>
+                      <p className="text-xs text-slate-600 font-normal">{n.message}</p>
                     </div>
                   ))
                 )}
@@ -248,7 +229,7 @@ export default function TechHeader({
             <div className="pt-4 border-t border-slate-100">
               <button 
                 onClick={() => setShowNotificationDrawer(false)}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors text-center"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors text-center"
               >
                 Close Drawer
               </button>
