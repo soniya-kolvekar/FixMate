@@ -90,7 +90,7 @@ export default function DispatcherHeader({
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 font-bold text-xs"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
               >
                 &times;
               </button>
@@ -140,7 +140,7 @@ export default function DispatcherHeader({
                 </div>
                 <button 
                   onClick={() => setShowNotificationDrawer(false)}
-                  className="text-slate-400 hover:text-slate-650"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -158,7 +158,7 @@ export default function DispatcherHeader({
                         <h5 className="text-xs font-extrabold text-slate-800">{n.title}</h5>
                         <span className="text-[10px] font-bold text-slate-400">{n.time}</span>
                       </div>
-                      <p className="text-xs text-slate-650 font-medium">{n.message}</p>
+                      <p className="text-xs text-slate-600 font-medium">{n.message}</p>
                     </div>
                   ))
                 )}

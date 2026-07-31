@@ -13,7 +13,37 @@ export default function useDispatcherState() {
   const [dispatcherStatus, setDispatcherStatus] = useState('Online');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, requests, technicians, map, logs
+  const [activeTab, setActiveTabState] = useState('dashboard'); // dashboard, requests, technicians, map, logs
+
+  // Restore activeTab on mount from URL search params or localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTab = urlParams.get('tab');
+      const savedTab = localStorage.getItem('fixmate_dispatcher_active_tab');
+      const validTabs = ['dashboard', 'requests', 'technicians', 'map', 'logs'];
+      
+      const tabToUse = (urlTab && validTabs.includes(urlTab)) 
+        ? urlTab 
+        : (savedTab && validTabs.includes(savedTab)) 
+        ? savedTab 
+        : 'dashboard';
+
+      setActiveTabState(tabToUse);
+    }
+  }, []);
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fixmate_dispatcher_active_tab', tab);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+      } catch(e) {}
+    }
+  };
 
   // Service Requests specific states
   const [selectedServiceType, setSelectedServiceType] = useState('All');
@@ -85,9 +115,11 @@ export default function useDispatcherState() {
   useEffect(() => {
     let unsubBookings = null;
     let unsubEmergency = null;
+    let unsubJobs = null;
     
     let bookingsList = [];
     let emergencyList = [];
+    let jobsList = [];
     
     const getServiceType = (docCategory, docService) => {
       const cat = (docCategory || docService || '').toLowerCase();
@@ -129,8 +161,6 @@ export default function useDispatcherState() {
     };
 
     const processLists = () => {
-      const combined = [];
-      
       const mapItem = (d, isEmergency) => {
         const data = d.data();
         const rawStatus = data.status || (isEmergency ? 'Emergency Pending' : 'Pending');
@@ -163,20 +193,36 @@ export default function useDispatcherState() {
           location: data.address || data.location || 'Mangaluru',
           color: getServiceColor(serviceType),
           icon: getServiceIcon(serviceType),
-          assignedTech: data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || data.recommendedTech || null,
+          assignedTech: (data.status && data.status.toUpperCase() !== 'UNASSIGNED' && !data.status.toUpperCase().includes('PENDING')) ? (data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || null) : (data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || null),
           isEmergency,
           collectionName: isEmergency ? 'emergencyBookings' : 'bookings',
           createdAt: data.createdAt
         };
       };
       
-      bookingsList.forEach(item => combined.push(mapItem(item, false)));
-      emergencyList.forEach(item => combined.push(mapItem(item, true)));
-      jobsList.forEach(item => {
-        if (!combined.some(c => c.id === item.id)) {
-          combined.push(mapItem(item, false));
+      const itemMap = new Map();
+
+      const processDoc = (d, isEmergency) => {
+        const item = mapItem(d, isEmergency);
+        if (!itemMap.has(item.id)) {
+          itemMap.set(item.id, item);
+        } else {
+          const existing = itemMap.get(item.id);
+          const eRaw = (existing.rawStatus || '').toLowerCase();
+          const nRaw = (item.rawStatus || '').toLowerCase();
+
+          // Prefer newer/more specific stage progression status
+          if (nRaw !== eRaw && (nRaw.includes('way') || nRaw.includes('reached') || nRaw.includes('start') || nRaw.includes('accept') || nRaw.includes('complete') || nRaw.includes('cancel'))) {
+            itemMap.set(item.id, { ...existing, ...item, rawStatus: item.rawStatus, status: item.status });
+          }
         }
-      });
+      };
+
+      jobsList.forEach(item => processDoc(item, false));
+      emergencyList.forEach(item => processDoc(item, true));
+      bookingsList.forEach(item => processDoc(item, false));
+
+      const combined = Array.from(itemMap.values());
       
       // Sort by createdAt descending
       combined.sort((a, b) => {
@@ -187,8 +233,6 @@ export default function useDispatcherState() {
       
       setRequests(combined);
     };
-
-    let jobsList = [];
 
     try {
       const bookingsRef = collection(db, 'bookings');
@@ -210,7 +254,6 @@ export default function useDispatcherState() {
       console.warn('Error listening to emergency bookings:', e);
     }
 
-    let unsubJobs = null;
     try {
       const jobsRef = collection(db, 'jobs');
       unsubJobs = onSnapshot(jobsRef, (snapshot) => {
@@ -222,18 +265,59 @@ export default function useDispatcherState() {
     }
 
     const handleStatusUpdateEvent = (e) => {
-      const detail = e.detail;
-      if (detail && detail.id && detail.status) {
-        setRequests(prev => prev.map(r => r.id === detail.id ? { ...r, rawStatus: detail.status, status: detail.status.toUpperCase().includes('COMPLET') ? 'COMPLETED' : detail.status.toUpperCase().includes('CANCEL') ? 'CANCELLED' : detail.status.toUpperCase().includes('ASSIGN') || detail.status.toUpperCase().includes('ACCEPT') ? 'ASSIGNED' : 'IN-PROGRESS' } : r));
+      let detail = e?.detail;
+      if (!detail && e?.key === 'fixmate_last_job_status_update' && e?.newValue) {
+        try { detail = JSON.parse(e.newValue); } catch(err) {}
+      }
+      if (!detail) {
+        try {
+          const raw = localStorage.getItem('fixmate_last_job_status_update');
+          if (raw) detail = JSON.parse(raw);
+        } catch(err) {}
+      }
+
+      const targetJobId = detail?.id || detail?.jobId;
+      const targetStatus = detail?.status;
+      const targetTech = detail?.technicianName || detail?.assignedTechName || detail?.assignedTech || detail?.techName;
+
+      if (targetStatus && (targetJobId || targetTech)) {
+        setRequests(prev => prev.map(r => {
+          const isTarget = (targetJobId && r.id === targetJobId) || 
+            (targetTech && r.assignedTech && (
+              r.assignedTech.toLowerCase() === targetTech.toLowerCase() ||
+              targetTech.toLowerCase().includes(r.assignedTech.toLowerCase()) ||
+              r.assignedTech.toLowerCase().includes(targetTech.toLowerCase())
+            ));
+
+          if (isTarget) {
+            const rawStatus = targetStatus;
+            let normStatus = 'IN-PROGRESS';
+            const s = targetStatus.toUpperCase();
+            if (s.includes('COMPLET') || s.includes('DONE')) normStatus = 'COMPLETED';
+            else if (s.includes('CANCEL')) normStatus = 'CANCELLED';
+            else if (s.includes('UNASSIGN')) normStatus = 'UNASSIGNED';
+            else if (s.includes('ASSIGN') || s.includes('ACCEPT')) normStatus = 'ASSIGNED';
+
+            return {
+              ...r,
+              rawStatus,
+              status: normStatus
+            };
+          }
+          return r;
+        }));
       }
     };
+
     window.addEventListener('fixmate_job_status_updated', handleStatusUpdateEvent);
+    window.addEventListener('storage', handleStatusUpdateEvent);
 
     return () => {
       if (unsubBookings) unsubBookings();
       if (unsubEmergency) unsubEmergency();
       if (unsubJobs) unsubJobs();
       window.removeEventListener('fixmate_job_status_updated', handleStatusUpdateEvent);
+      window.removeEventListener('storage', handleStatusUpdateEvent);
     };
   }, []);
 
@@ -298,11 +382,20 @@ export default function useDispatcherState() {
         if (!snapshot.empty) {
           const list = snapshot.docs.map(docSnap => {
             const data = docSnap.data();
+            let formattedTime = data.time;
+            if (!formattedTime || formattedTime === 'Just now') {
+              if (data.createdAt) {
+                const dateObj = data.createdAt.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
+                formattedTime = isNaN(dateObj.getTime()) ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              } else {
+                formattedTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            }
             return {
               id: docSnap.id,
               title: data.title || 'System Alert',
               message: data.notes || data.message || 'No additional details.',
-              time: data.time || 'Just now',
+              time: formattedTime,
               createdAt: data.createdAt
             };
           });
@@ -421,7 +514,8 @@ export default function useDispatcherState() {
             return {
               id: docSnap.id,
               name: data.name || data.fullName || 'Rajesh Kumar',
-              assigned: data.assignedJobsCount || 0,
+              assigned: Math.min(6, data.assignedJobsCount || 0),
+              completed: data.completedJobsCount || data.completed || 0,
               travel: 1,
               status: formattedStatus,
               specialty: data.specialization || (Array.isArray(data.skills) ? data.skills.join(', ') : data.specialty) || 'Plumbing',
@@ -448,83 +542,143 @@ export default function useDispatcherState() {
     };
   }, []);
 
-  // Live Technicians (Dynamically derived from Firestore technicians and bookings)
+  // Live Technicians (Strictly derived from database assigned/accepted jobs)
   const liveTechnicians = useMemo(() => {
-    const locations = [
-      'Kodialbail, Mangaluru',
-      'Hampankatta, Mangaluru',
-      'Kadri, Mangaluru',
-      'Bejai, Mangaluru',
-      'Lalbagh, Mangaluru',
-      'Kavoor, Mangaluru',
-      'Urwa, Mangaluru',
-      'Attavar, Mangaluru',
-      'Kulshekar, Mangaluru'
-    ];
+    const knownCoords = {
+      kodialbail: { x: 260, y: 240 },
+      hampankatta: { x: 320, y: 280 },
+      kadri: { x: 420, y: 210 },
+      bejai: { x: 380, y: 180 },
+      lalbagh: { x: 330, y: 200 },
+      padil: { x: 540, y: 320 },
+      kavoor: { x: 450, y: 130 },
+      urwa: { x: 220, y: 170 },
+      attavar: { x: 280, y: 340 },
+      surathkal: { x: 180, y: 120 },
+      kulshekar: { x: 500, y: 250 },
+      falnir: { x: 310, y: 310 }
+    };
 
     const hashStr = (str) => {
       let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      for (let i = 0; i < (str || '').length; i++) {
+        hash = (str || '').charCodeAt(i) + ((hash << 5) - hash);
       }
       return Math.abs(hash);
     };
 
-    const onlineTechs = technicians.filter(t => t.status && t.status.toLowerCase() !== 'offline');
+    // Filter requests that are assigned or accepted and currently active
+    const assignedRequests = requests.filter(r => {
+      if (!r || r.status === 'UNASSIGNED' || r.status === 'CANCELLED' || r.status === 'COMPLETED') return false;
+      const raw = (r.rawStatus || r.status || '').toLowerCase();
+      const hasTech = Boolean(r.assignedTech || r.technicianName || r.assignedTechName || r.assignedTo);
+      const isActiveStatus = ['assigned', 'accepted', 'on the way', 'in transit', 'enroute', 'reached location', 'reached', 'service started', 'in-progress', 'in progress', 'busy'].some(s => raw.includes(s));
+      return hasTech && isActiveStatus;
+    });
 
-    return onlineTechs.map((tech) => {
-      // Find active request if any
-      const activeRequest = requests.find(r => 
-        (r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS') &&
-        (
-          !r.assignedTech ||
-          r.assignedTech.toLowerCase() === tech.name.toLowerCase() ||
-          tech.name.toLowerCase().includes(r.assignedTech.toLowerCase()) ||
-          r.assignedTech.toLowerCase().includes(tech.name.toLowerCase()) ||
-          onlineTechs.length === 1
-        )
+    // Sort newer jobs first
+    assignedRequests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    const activeList = [];
+    const processedTechNames = new Set();
+
+    assignedRequests.forEach(req => {
+      const techName = req.assignedTech || req.technicianName || req.assignedTechName || req.assignedTo || 'Technician';
+      const techKey = techName.toLowerCase().trim();
+      
+      // Ensure each technician only appears ONCE in the active fleet list
+      if (processedTechNames.has(techKey)) return;
+      processedTechNames.add(techKey);
+
+      const techObj = technicians.find(t => 
+        t.name.toLowerCase() === techKey ||
+        techKey.includes(t.name.toLowerCase()) ||
+        t.name.toLowerCase().includes(techKey)
       );
 
-      // Check localStorage for recent real-time status update override
+      const techId = techObj?.id || `tech_${hashStr(techName)}`;
+
+      // Check localStorage for any job status override
       const lastStatusUpdate = (() => {
+        if (typeof window === 'undefined') return null;
         try {
           const raw = localStorage.getItem('fixmate_last_job_status_update');
           if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed && parsed.status) return parsed.status;
+            if (parsed && parsed.status) {
+              const targetTech = parsed.technicianName || parsed.assignedTechName || parsed.assignedTech || parsed.techName;
+              const targetJobId = parsed.jobId || parsed.id;
+              if (req.id === targetJobId || (targetTech && targetTech.toLowerCase() === techKey)) {
+                return parsed.status;
+              }
+            }
           }
+        } catch(e) {}
+
+        try {
+          const jobSpecific = localStorage.getItem(`fixmate_job_status_${req.id}`);
+          if (jobSpecific) return jobSpecific;
         } catch(e) {}
         return null;
       })();
 
-      const currentStatus = lastStatusUpdate || activeRequest?.rawStatus || activeRequest?.status || tech.status || 'Assigned';
-      const hashValue = hashStr(tech.id || tech.name);
-      const isCompleted = currentStatus === 'Completed' || currentStatus === 'COMPLETED';
+      const currentStatus = lastStatusUpdate || req.rawStatus || req.status || 'Assigned';
+      if (currentStatus.toLowerCase().includes('complete') || currentStatus.toLowerCase().includes('cancel')) {
+        return;
+      }
 
-      // Coordinate placement in SVG grid (cx: 150-650, cy: 150-500)
-      const cx = 150 + (hashValue % 500);
-      const cy = 150 + ((hashValue >> 2) % 350);
+      // Dynamic Location from Database Request
+      const dbLoc = req.location || req.address || techObj?.zone || 'Mangaluru';
 
-      const initials = tech.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'TK';
+      // Compute dynamic SVG coordinates (cx, cy) from Database Location + Request ID
+      const locKey = Object.keys(knownCoords).find(k => dbLoc.toLowerCase().includes(k));
+      let baseCx = 350;
+      let baseCy = 250;
+      if (locKey) {
+        baseCx = knownCoords[locKey].x;
+        baseCy = knownCoords[locKey].y;
+      } else {
+        const h = hashStr(dbLoc);
+        baseCx = 180 + (h % 440);
+        baseCy = 140 + ((h >> 3) % 280);
+      }
 
-      // Pick neighborhood from Mangaluru list based on hash
-      const defaultLoc = locations[hashValue % locations.length];
-      const destLoc = locations[(hashValue + 1) % locations.length];
+      const reqHash = hashStr(req.id || techName);
+      // Small offset to ensure multiple markers near same area don't overlap exactly
+      const offsetX = ((reqHash % 9) - 4) * 16;
+      const offsetY = (((reqHash >> 2) % 9) - 4) * 16;
+      const cx = Math.max(120, Math.min(680, baseCx + offsetX));
+      const cy = Math.max(100, Math.min(460, baseCy + offsetY));
 
-      return {
-        id: tech.id,
-        name: tech.name,
-        role: tech.specialty || tech.specialization || 'Technician',
-        eta: (currentStatus.toLowerCase().includes('way') || currentStatus.toLowerCase().includes('assign') || currentStatus.toLowerCase().includes('accept')) ? `${5 + (hashValue % 15)} MIN` : null,
-        destination: activeRequest ? activeRequest.location : destLoc,
-        currentLocation: activeRequest ? activeRequest.location : defaultLoc,
+      const initials = techName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'TK';
+
+      // Dynamic timestamps per technician / job
+      const assignedMinAgo = Math.max(5, (reqHash % 40) + 10);
+      const acceptedMinAgo = Math.max(2, Math.floor(assignedMinAgo * 0.6));
+      const onWayMinAgo = Math.max(1, Math.floor(assignedMinAgo * 0.3));
+
+      activeList.push({
+        id: techId,
+        jobId: req.id,
+        name: techName,
+        phone: techObj?.phone || '+91 98765 43210',
+        role: req.service || req.title || techObj?.specialty || 'Technician',
+        activeJobTitle: req.service || req.title || 'Service Request',
+        eta: `${5 + (reqHash % 15)} MIN`,
+        destination: dbLoc,
+        currentLocation: dbLoc,
         status: currentStatus,
-        progress: isCompleted ? 100 : currentStatus.toLowerCase().includes('start') ? 75 : currentStatus.toLowerCase().includes('reach') ? 50 : 25,
+        progress: currentStatus.toLowerCase().includes('start') ? 75 : currentStatus.toLowerCase().includes('reach') ? 50 : 25,
         initials,
         cx,
-        cy
-      };
+        cy,
+        assignedTimeLabel: `${assignedMinAgo}m ago`,
+        acceptedTimeLabel: `${acceptedMinAgo}m ago`,
+        onWayTimeLabel: `${onWayMinAgo}m ago`
+      });
     });
+
+    return activeList;
   }, [technicians, requests]);
 
   const [selectedTechForStatus, setSelectedTechForStatus] = useState(null);
@@ -616,14 +770,48 @@ export default function useDispatcherState() {
     );
   }, [activities, searchQuery]);
 
+  const enrichedTechnicians = useMemo(() => {
+    return technicians.map(tech => {
+      // Find database requests assigned to this technician
+      const techRequests = requests.filter(r => 
+        r.assignedTech && r.status !== 'UNASSIGNED' && (
+          r.assignedTech.toLowerCase() === tech.name.toLowerCase() ||
+          tech.name.toLowerCase().includes(r.assignedTech.toLowerCase()) ||
+          r.assignedTech.toLowerCase().includes(tech.name.toLowerCase())
+        )
+      );
+
+      const activeJobsCount = techRequests.filter(r => r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS').length;
+      const completedFromRequests = techRequests.filter(r => r.status === 'COMPLETED').length;
+
+      // Real completed count: use completed requests if present, else fallback to base completed
+      const finalCompleted = completedFromRequests > 0 ? completedFromRequests : (tech.completed || 0);
+
+      // Real active assigned count: reduce base assigned by finalCompleted, or use activeJobsCount if active requests exist
+      let finalAssigned = 0;
+      if (activeJobsCount > 0) {
+        finalAssigned = activeJobsCount;
+      } else {
+        const baseAssigned = tech.assigned !== undefined ? tech.assigned : 0;
+        finalAssigned = Math.max(0, baseAssigned - finalCompleted);
+      }
+
+      return {
+        ...tech,
+        assigned: Math.min(6, finalAssigned),
+        completed: finalCompleted
+      };
+    });
+  }, [technicians, requests]);
+
   const filteredTechnicians = useMemo(() => {
-    if (!searchQuery) return technicians;
-    return technicians.filter(tech => 
+    if (!searchQuery) return enrichedTechnicians;
+    return enrichedTechnicians.filter(tech => 
       tech.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tech.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tech.zone.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [technicians, searchQuery]);
+  }, [enrichedTechnicians, searchQuery]);
 
   // Service Requests Filters & Pagination
   const filteredRequests = useMemo(() => {
@@ -722,6 +910,26 @@ export default function useDispatcherState() {
     try {
       await updateDoc(doc(db, colName, id), updatePayload);
       await setDoc(doc(db, 'jobs', id), { id, status: 'Completed', updatedAt: new Date().toISOString() }, { merge: true });
+
+      // Synchronize technician assigned & completed counts in Firestore
+      const assignedTechName = req.assignedTech;
+      if (assignedTechName) {
+        const assignedTechObj = technicians.find(t => 
+          t.name.toLowerCase() === assignedTechName.toLowerCase() ||
+          t.name.toLowerCase().includes(assignedTechName.toLowerCase()) ||
+          assignedTechName.toLowerCase().includes(t.name.toLowerCase())
+        );
+        if (assignedTechObj && assignedTechObj.id) {
+          const techRef = doc(db, 'technicians', assignedTechObj.id);
+          const newAssigned = Math.max(0, (assignedTechObj.assigned || 1) - 1);
+          const newCompleted = (assignedTechObj.completed || 0) + 1;
+          await setDoc(techRef, {
+            assignedJobsCount: newAssigned,
+            completedJobsCount: newCompleted
+          }, { merge: true }).catch(() => {});
+        }
+      }
+
       showToast(`✅ Job ${id} marked as COMPLETED.`);
       
       setActivities(prev => [
@@ -756,24 +964,24 @@ export default function useDispatcherState() {
   };
 
   const handleConfirmAssignment = async (techName) => {
-    if (!assigningDispatch) return;
+    const targetDispatch = assigningDispatch || {};
+    const dispatchId = targetDispatch.id;
 
-    const dispatchId = assigningDispatch.id;
-    setDispatches(prev => prev.filter(d => d.id !== dispatchId));
-    
-    // Sync with backend & localStorage
-    fetch(`http://localhost:5000/api/dispatches/${dispatchId}`, { method: 'DELETE' }).catch(() => {});
-    try {
-      const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-      const updated = local.filter(d => d.id !== dispatchId);
-      localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
-      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
-    } catch(e) {}
+    if (dispatchId) {
+      setDispatches(prev => prev.filter(d => d.id !== dispatchId));
+      fetch(`http://localhost:5000/api/dispatches/${dispatchId}`, { method: 'DELETE' }).catch(() => {});
+      try {
+        const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+        const updated = local.filter(d => d.id !== dispatchId);
+        localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
+        window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+      } catch(e) {}
+    }
 
     // Find if there is a corresponding booking in requests
-    const requestItem = requests.find(r => r.id === assigningDispatch.id || r.id === assigningDispatch.reqId);
+    const requestItem = requests.find(r => (targetDispatch.id && r.id === targetDispatch.id) || (targetDispatch.reqId && r.id === targetDispatch.reqId));
     const selectedTech = technicians.find(t => t.name === techName);
-    const targetId = requestItem?.id || assigningDispatch.id || `JOB-${Date.now()}`;
+    const targetId = requestItem?.id || targetDispatch.id || `JOB-${Date.now()}`;
 
     const jobPayload = {
       id: targetId,
@@ -783,15 +991,15 @@ export default function useDispatcherState() {
       technicianName: techName,
       assignedTechName: techName,
       technicianPhone: selectedTech?.phone || '+91 98765 43210',
-      title: assigningDispatch.title || requestItem?.service || requestItem?.title || 'Service Request',
-      category: assigningDispatch.category || requestItem?.service || 'Plumbing',
-      location: assigningDispatch.address || assigningDispatch.location || requestItem?.location || 'Kodialbail & Hampankatta, Mangaluru',
-      customerName: assigningDispatch.customerName || requestItem?.customer || 'Customer',
-      customerPhone: assigningDispatch.customerPhone || requestItem?.phone || '+91 98123 45678',
-      price: Number(assigningDispatch.price || requestItem?.price || 499),
-      isEmergency: Boolean(assigningDispatch.priority?.includes('10') || requestItem?.isEmergency),
-      description: assigningDispatch.notes || requestItem?.notes || 'Assigned by Dispatcher',
-      time: assigningDispatch.time || '09:30 AM',
+      title: targetDispatch.title || requestItem?.service || requestItem?.title || 'Service Request',
+      category: targetDispatch.category || requestItem?.service || 'Plumbing',
+      location: targetDispatch.address || targetDispatch.location || requestItem?.location || 'Kodialbail & Hampankatta, Mangaluru',
+      customerName: targetDispatch.customerName || requestItem?.customer || 'Customer',
+      customerPhone: targetDispatch.customerPhone || requestItem?.phone || '+91 98123 45678',
+      price: Number(targetDispatch.price || requestItem?.price || 499),
+      isEmergency: Boolean(targetDispatch.priority?.includes('10') || requestItem?.isEmergency),
+      description: targetDispatch.notes || requestItem?.notes || 'Assigned by Dispatcher',
+      time: targetDispatch.time || '09:30 AM',
       assignedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       updatedAt: new Date().toISOString()
     };
@@ -943,13 +1151,12 @@ export default function useDispatcherState() {
     { label: 'Requests', ariaLabel: 'View service requests', onClick: () => setActiveTab('requests') },
     { label: 'Technicians', ariaLabel: 'Manage technicians', onClick: () => setActiveTab('technicians') },
     { label: 'Live Map', ariaLabel: 'Live dispatch map', onClick: () => setActiveTab('map') },
-    { label: 'Logs', ariaLabel: 'System logs', onClick: () => setActiveTab('logs') },
-    { label: 'Main Home Platform', ariaLabel: 'Return to home landing page', link: '/' }
+    { label: 'Home', ariaLabel: 'Return to home landing page', link: '/' }
   ];
 
   const socialItems = [
     { label: 'New Request', onClick: () => setIsNewRequestOpen(true) },
-    { label: 'Main Website', link: '/' }
+    { label: 'Home', link: '/' }
   ];
 
   return {

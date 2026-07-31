@@ -11,16 +11,16 @@ export default function AssignTechnicianModal({
   if (!assigningDispatch) return null;
 
   return (
-    <div className="modal-overlay">
+    <div className="fixed inset-0 z-[2500] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-md w-full mx-4 shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-        <div className="bg-slate-50 px-6 py-4.5 border-b border-slate-200 flex items-center justify-between">
+        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h3 className="text-base font-extrabold text-[#0A2540]">Assign Emergency Call</h3>
             <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">Ticket: {assigningDispatch.id}</p>
           </div>
           <button 
             onClick={() => setAssigningDispatch(null)} 
-            className="text-2xl text-slate-400 hover:text-[#0A2540] font-light leading-none"
+            className="text-2xl text-slate-400 hover:text-[#0A2540] font-light leading-none p-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
             &times;
           </button>
@@ -36,9 +36,11 @@ export default function AssignTechnicianModal({
             </div>
           </div>
 
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Select Technician Roster (Real-Time Status)</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+            Select Technician Roster (Real-Time Status)
+          </label>
           
-          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
             {(() => {
               const getJobSpecialtyKey = (serviceName) => {
                 const s = (serviceName || '').toLowerCase();
@@ -61,37 +63,43 @@ export default function AssignTechnicianModal({
               };
 
               const jobCategory = assigningDispatch.techSpecialty || assigningDispatch.category || '';
-              const filteredTechs = technicians.filter(tech => isTechnicianMatch(tech.specialty, jobCategory));
+              
+              // 1. Exclude technicians who have reached capacity (>= 6 jobs)
+              const availableCapacityTechs = technicians.filter(tech => (tech.assigned || 0) < 6);
+              
+              // 2. Filter matching technicians under 6 jobs
+              const filteredTechs = availableCapacityTechs.filter(tech => isTechnicianMatch(tech.specialty, jobCategory));
 
-              if (filteredTechs.length === 0) {
+              // If no matching technicians under 6 jobs, fallback to other available capacity techs
+              const displayTechs = filteredTechs.length > 0 ? filteredTechs : availableCapacityTechs;
+
+              if (displayTechs.length === 0) {
                 return (
-                  <div className="text-center py-8 px-4 text-xs text-slate-550 font-bold border border-dashed border-slate-200 rounded-xl bg-slate-50">
-                    ⚠️ No active technicians registered for "{jobCategory}" specialty in the database.
+                  <div className="text-center py-8 px-4 text-xs text-rose-600 font-bold border border-dashed border-rose-200 rounded-xl bg-rose-50/50">
+                    ⚠️ No available technicians (all technicians for "{jobCategory}" have reached 6/6 jobs capacity or are offline).
                   </div>
                 );
               }
 
-              return filteredTechs.map((tech) => {
-                const isCapacityFull = (tech.assigned || 0) >= 6;
-                const isOffline = tech.status === 'Offline' || isCapacityFull;
-                const isBusy = tech.status === 'Busy';
-                const isMatch = assigningDispatch.techSpecialty 
-                  ? tech.specialty.toLowerCase().includes(assigningDispatch.techSpecialty.toLowerCase()) 
-                  : tech.name.toLowerCase() === assigningDispatch.recommendedTech?.toLowerCase();
+              return displayTechs.map((tech) => {
+                const rawStatus = (tech.status || '').toLowerCase();
+                const isBusy = rawStatus.includes('busy') || rawStatus.includes('started');
+                const isOffline = rawStatus.includes('offline');
+                const isNotAssignable = isBusy || isOffline;
+                
+                const isMatch = isTechnicianMatch(tech.specialty, jobCategory);
 
                 return (
                   <button
-                    key={tech.name}
-                    disabled={isOffline}
-                    onClick={() => !isOffline && handleConfirmAssignment(tech.name)}
+                    key={tech.id || tech.name}
+                    disabled={isNotAssignable}
+                    onClick={() => !isNotAssignable && handleConfirmAssignment(tech.name)}
                     className={`w-full text-left p-4 rounded-xl border flex justify-between items-center transition-all group ${
-                      isOffline 
-                        ? 'border-slate-200 bg-slate-100/60 opacity-60 cursor-not-allowed'
-                        : isBusy
-                          ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50'
-                          : isMatch 
-                            ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50' 
-                            : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                      isNotAssignable 
+                        ? 'border-slate-200 bg-slate-100/70 opacity-60 cursor-not-allowed'
+                        : isMatch 
+                          ? 'border-blue-500 bg-blue-50/40 hover:bg-blue-50 cursor-pointer shadow-xs' 
+                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer'
                     }`}
                   >
                     <div>
@@ -101,26 +109,31 @@ export default function AssignTechnicianModal({
                           isOffline 
                             ? 'bg-slate-200 text-slate-600'
                             : isBusy
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         }`}>
                           ● {tech.status}
                         </span>
-                        {isMatch && !isOffline && (
-                          <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                        {isMatch && !isNotAssignable && (
+                          <span className="text-[9px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full shadow-xs">
                             ⭐ Specialty Match
                           </span>
                         )}
+                        {isNotAssignable && (
+                          <span className="text-[9px] font-black bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
+                            🚫 Cannot Assign
+                          </span>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">
-                        {tech.specialty} • Zone: {tech.zone || 'Bengaluru'}
-                        {isOffline && ' • (Receives No Assignments)'}
-                        {isBusy && ' • (Finishing Existing Work)'}
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">
+                        {tech.specialty} • Zone: {tech.zone || 'Mangaluru'}
+                        {isOffline && ' • (Offline)'}
+                        {isBusy && ' • (Busy on Duty - Cannot Assign)'}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs font-extrabold text-[#0A2540] block">{tech.assigned} / 6 jobs</span>
-                      <span className="text-[9px] font-bold text-slate-400 block">{tech.travel} in transit</span>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-extrabold text-[#0A2540] block">{tech.assigned || 0} / 6 jobs</span>
+                      <span className="text-[9px] font-bold text-slate-400 block">{tech.travel || 0} in transit</span>
                     </div>
                   </button>
                 );
@@ -132,7 +145,7 @@ export default function AssignTechnicianModal({
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
           <button 
             onClick={() => setAssigningDispatch(null)}
-            className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
+            className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors"
           >
             Cancel
           </button>
