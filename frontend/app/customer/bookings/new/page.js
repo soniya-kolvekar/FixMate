@@ -23,7 +23,7 @@ import {
   limit,
 } from 'firebase/firestore';
 
-function BookingPageContent() {
+export default function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emergency = searchParams.get("emergency");
@@ -232,7 +232,7 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
           </label>
 
           <div className="relative">
-            <FileText className="absolute top-3 left-3 text-slate-400 w-5 h-5" />
+            <FileText className="absolute top-3 left-2 text-slate-400 w-3 h-5" />
 
             <textarea
               name="description"
@@ -240,12 +240,12 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
               required
               value={formData.description}
               onChange={handleChange}
-              placeholder="Describe the issue in detail..."
+              placeholder="     Describe the issue in detail..."
               required
               className="w-full border rounded-xl p-4 focus:ring-2 focus:ring-[#0A2540] outline-none"
             />
           </div>
-        </div>
+          </div>
 
           {/* Preferred Date */}
 
@@ -426,13 +426,5 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
 
     </main>
      </Suspense>
-  );
-}
-
-export default function BookingPage() {
-  return (
-    <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
-      <BookingPageContent />
-    </Suspense>
   );
 }

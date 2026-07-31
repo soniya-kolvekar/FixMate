@@ -1,10 +1,11 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { serviceCategories } from '../../../data/services';
+import { useRouter } from 'next/navigation';
 
-function ServicesPageContent() {
+export default function ServicesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -26,7 +27,9 @@ function ServicesPageContent() {
   router.push(url);
 };
 
+
   return (
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading services catalog...</div>}>
     <div className="max-w-7xl mx-auto px-6 py-10">
 
       <h1 className="text-4xl font-bold text-[#0A2540] mb-2">
@@ -45,26 +48,32 @@ function ServicesPageContent() {
             key={service.id}
             className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 hover:shadow-xl transition"
           >
-            <h3 className="text-xl font-bold text-[#0A2540] mb-2">
-              {service.title}
-            </h3>
 
-            <p className="text-slate-600 text-sm mb-4">
-              {service.desc}
+            <h2 className="text-xl font-bold text-[#0A2540]">
+              {service.name}
+            </h2>
+
+            <p className="text-slate-600 mt-3">
+              {service.description}
             </p>
 
-            <div className="flex items-center justify-between font-semibold">
-              <span className="text-[#0A2540]">
-                ₹{service.price}
-              </span>
+            <div className="mt-5 space-y-2">
+              <p>
+                <span className="font-semibold">Price:</span> ₹{service.price}
+              </p>
 
-              <button
-                onClick={() => handleBooking(service)}
-                className="bg-[#0A2540] hover:bg-blue-950 text-white text-sm px-4 py-2 rounded-lg transition"
-              >
-                Book Now
-              </button>
+              <p>
+                <span className="font-semibold">Duration:</span>{' '}
+                {service.duration}
+              </p>
             </div>
+
+            <button
+              onClick={() => handleBooking(service)}
+              className="mt-6 w-full bg-[#0A2540] text-white py-3 rounded-xl hover:bg-[#16395e]"
+            >
+              Book Service
+            </button>
 
           </div>
 
@@ -73,13 +82,6 @@ function ServicesPageContent() {
       </div>
 
     </div>
-  );
-}
-
-export default function ServicesPage() {
-  return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading services catalog...</div>}>
-      <ServicesPageContent />
     </Suspense>
   );
 }
