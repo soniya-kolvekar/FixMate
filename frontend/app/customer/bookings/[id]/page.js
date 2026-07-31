@@ -103,6 +103,8 @@ export default function BookingDetailsPage() {
 
       case "Assigned":
         return "bg-blue-100 text-blue-700";
+      case "Accepted":
+        return "bg-blue-100 text-blue-700";
 
       case "In Progress":
         return "bg-indigo-100 text-indigo-700";
@@ -128,14 +130,23 @@ case "Service Started":
 
   
 // Booking Progress Stages
-const bookingStages = [
-  "Pending",
-  "Assigned",
-  "On The Way",
-  "Reached Location",
-  "Service Started",
-  "Completed",
-];
+const bookingStages = booking.isEmergency
+  ? [
+      "Pending",
+      "Accepted",
+      "On The Way",
+      "Reached Location",
+      "Service Started",
+      "Completed",
+    ]
+  : [
+      "Pending",
+      "Assigned",
+      "On The Way",
+      "Reached Location",
+      "Service Started",
+      "Completed",
+    ];
 
 const getStageIndex = () => {
   switch (booking.status?.trim()) {
@@ -144,6 +155,8 @@ const getStageIndex = () => {
       return 0;
 
     case "Assigned":
+      return 1;
+    case "Accepted":
       return 1;
 
     case "On The Way":
@@ -173,15 +186,12 @@ const getStageIndex = () => {
   <div className="max-w-6xl mx-auto px-6 py-4 flex items-center">
 
     <button
-      onClick={() => router.push("/customer")}
-      className="p-2 rounded-lg hover:bg-white/10 transition"
-      title="Home"
-    >
-      <Home
-        size={24}
-        className="text-white"
-      />
-    </button>
+          onClick={() => router.push("/customer")}
+          className="flex items-center gap-2 bg-[#0A2540] hover:bg-[#13395F] text-white px-4 py-2 rounded-lg transition"
+        >
+          <Home size={18} />
+          Home
+        </button>
 
   </div>
 
@@ -285,11 +295,6 @@ const getStageIndex = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <IndianRupee />
-                  ₹{booking.price}
-                </div>
-
-                <div className="flex items-center gap-3">
                   <Wrench />
                   {booking.duration}
                 </div>
@@ -370,9 +375,79 @@ const getStageIndex = () => {
             )}
 
           </div>
+          {/* Billing Details */}
 
-          {/* Booking Progress */}
+<div className="mt-8 border rounded-xl p-6">
 
+  <h2 className="text-xl font-bold mb-6">
+    Billing Details
+  </h2>
+
+  <div className="space-y-4">
+
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Estimated Price
+      </span>
+
+      <span className="font-semibold text-blue-600">
+        ₹{booking.price || 0}
+      </span>
+    </div>
+
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Extra Labour Charges
+      </span>
+
+      <span className="font-semibold text-orange-600">
+        ₹{booking.extraLabour || 0}
+      </span>
+    </div>
+
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Extra Material Charges
+      </span>
+
+      <span className="font-semibold text-orange-600">
+        ₹{booking.extraMaterial || 0}
+      </span>
+    </div>
+
+    <hr />
+
+    <div className="flex justify-between text-lg">
+
+      <span className="font-bold">
+        Final Price
+      </span>
+
+      <span className="font-bold text-green-600">
+        ₹{booking.finalTotalBill || booking.price || 0}
+      </span>
+
+    </div>
+
+    {booking.extraChargesReason && (
+      <>
+        <hr />
+
+        <div>
+          <p className="font-semibold mb-2">
+            Reason for Additional Charges
+          </p>
+
+          <p className="text-gray-600">
+            {booking.extraChargesReason}
+          </p>
+        </div>
+      </>
+    )}
+
+  </div>
+
+</div>
           {/* Booking Progress */}
 
 <div className="mt-8 border rounded-xl p-6">
