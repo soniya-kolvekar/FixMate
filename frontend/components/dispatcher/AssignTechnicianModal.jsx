@@ -31,7 +31,6 @@ export default function AssignTechnicianModal({
             <p className="font-extrabold text-rose-800 text-sm">🚨 {assigningDispatch.title}</p>
             <p className="text-rose-700 font-semibold">📍 Address: {assigningDispatch.address}</p>
             <div className="flex items-center gap-2 pt-1">
-              <span className="text-[10px] font-black text-rose-600 bg-white/80 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-wider">{assigningDispatch.priority}</span>
               <span className="text-[10px] font-black text-slate-700 bg-white/80 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-wider">{assigningDispatch.category}</span>
               {assigningDispatch.price && <span className="text-xs font-black text-emerald-600">₹{assigningDispatch.price}</span>}
             </div>

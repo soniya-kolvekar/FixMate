@@ -171,10 +171,7 @@ export default function DashboardTab({
                   </div>
                 </div>
 
-                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
-                  <span className="text-sm font-black text-red-600">
-                    Priority 10
-                  </span>
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-end gap-3 shrink-0">
                   <button
                     onClick={() => handleOpenAssign({
                       id: req.id,
@@ -240,7 +237,7 @@ export default function DashboardTab({
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 font-medium mt-1">
-                      {disp.address} • <span className="font-extrabold text-[#0A2540]">{disp.priority}</span>
+                      {disp.address}
                     </p>
                     
                     <div className="flex items-center gap-2 flex-wrap mt-2.5">

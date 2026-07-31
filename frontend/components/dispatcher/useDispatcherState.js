@@ -590,10 +590,18 @@ export default function useDispatcherState() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [newRequestData, setNewRequestData] = useState({
     title: '',
+    customerName: '',
+    customerPhone: '',
     address: '',
     category: 'PLUMBING',
+    service: '',
+    price: '',
     type: 'RESIDENTIAL',
-    isEmergency: false
+    date: '',
+    timeSlot: '',
+    requestPreviousTechnician: false,
+    isEmergency: false,
+    notes: ''
   });
   
   const [assigningDispatch, setAssigningDispatch] = useState(null);
@@ -845,32 +853,43 @@ export default function useDispatcherState() {
     if (!newRequestData.title || !newRequestData.address) return;
 
     const isEmerg = newRequestData.isEmergency;
-    const categoryName = newRequestData.category === 'AC_SERVICE' ? 'AC Maintenance' : newRequestData.category === 'PLUMBING' ? 'Plumbing' : newRequestData.category === 'ELECTRICAL' ? 'Electrical' : newRequestData.category === 'CARPENTRY' ? 'Carpentry' : 'Appliance';
+    
+    let categoryName = 'Plumbing';
+    const catUpper = (newRequestData.category || '').toUpperCase();
+    if (catUpper.includes('PLUMB')) categoryName = 'Plumbing';
+    else if (catUpper.includes('ELECT')) categoryName = 'Electrical';
+    else if (catUpper.includes('AC')) categoryName = 'AC Maintenance';
+    else if (catUpper.includes('CARPEN')) categoryName = 'Carpentry';
+    else if (catUpper.includes('CLEAN')) categoryName = 'Cleaning';
+    else if (catUpper.includes('APPLIANCE')) categoryName = 'Appliance';
+    else if (catUpper.includes('PAINT')) categoryName = 'Painting';
+    else categoryName = newRequestData.category || 'Plumbing';
 
     const bookingData = {
       customerId: 'walk-in-dispatcher',
-      customerName: 'Walk-In Request',
+      customerName: newRequestData.customerName?.trim() || 'Walk-In Customer',
       customerEmail: 'dispatcher@fixmate.com',
+      customerPhone: newRequestData.customerPhone?.trim() || '',
 
-      category: newRequestData.category.toLowerCase(),
-      service: categoryName,
-      price: isEmerg ? 1499 : 499,
+      category: categoryName,
+      service: newRequestData.service?.trim() || categoryName,
+      price: newRequestData.price ? Number(newRequestData.price) : (isEmerg ? 1499 : 499),
       duration: '1-2 hrs',
 
       description: newRequestData.title,
       address: newRequestData.address,
       location: newRequestData.address,
-      date: null,
-      timeSlot: null,
+      date: isEmerg ? null : (newRequestData.date || null),
+      timeSlot: isEmerg ? null : (newRequestData.timeSlot || null),
 
-      requestPreviousTechnician: false,
+      requestPreviousTechnician: Boolean(newRequestData.requestPreviousTechnician),
       isEmergency: isEmerg,
 
-      notes: 'Created by dispatcher',
+      notes: newRequestData.notes?.trim() || 'Created by dispatcher',
       status: isEmerg ? 'Emergency Pending' : 'Pending',
 
       technicianId: null,
-      dispatcherId: 'dispatcher@fixmate.com',
+      dispatcherId: DISPATCHER_EMAIL,
 
       createdAt: serverTimestamp()
     };
@@ -904,10 +923,18 @@ export default function useDispatcherState() {
     setIsNewRequestOpen(false);
     setNewRequestData({
       title: '',
+      customerName: '',
+      customerPhone: '',
       address: '',
       category: 'PLUMBING',
+      service: '',
+      price: '',
       type: 'RESIDENTIAL',
-      isEmergency: false
+      date: '',
+      timeSlot: '',
+      requestPreviousTechnician: false,
+      isEmergency: false,
+      notes: ''
     });
   };
 
