@@ -19,7 +19,9 @@ export default function TechDashboard({
   onSelectJob, 
   onViewAllJobs, 
   onTriggerEmergency,
-  maxCapacity = 6
+  maxCapacity = 6,
+  avgRating = '4.92',
+  positivePercentage = 98
 }) {
   const isJobCancelled = (j) => 
     j.status === 'Cancelled' || 
@@ -61,7 +63,8 @@ export default function TechDashboard({
   const activeJobs = jobs.filter(j => j.status !== 'Completed' && !isJobCancelled(j));
   const emergencyJobs = jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY' || j.tag === 'URGENT') && !isJobCancelled(j) && j.status !== 'Completed');
   const completedTodayCount = jobs.filter(j => j.status === 'Completed').length;
-  const capacityPercentage = Math.min(100, Math.round((activeJobs.length / maxCapacity) * 100));
+  const totalJobsHandledToday = jobs.filter(j => !isJobCancelled(j)).length;
+  const capacityPercentage = Math.min(100, Math.round((totalJobsHandledToday / maxCapacity) * 100));
 
   const displayScheduleJobs = [...jobs].sort((a, b) => {
     const tierA = getJobTier(a);
@@ -123,7 +126,7 @@ export default function TechDashboard({
             </div>
           </div>
           <div className="text-2xl font-black text-[#0A2540] tracking-tight">
-            {activeJobs.length} / {maxCapacity} Jobs
+            {totalJobsHandledToday} / {maxCapacity} Jobs
           </div>
           <div className="text-xs font-bold text-slate-500">
             {capacityPercentage}% Capacity Used
@@ -138,9 +141,9 @@ export default function TechDashboard({
               <Star className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#0A2540] tracking-tight">4.92 / 5.0</div>
+          <div className="text-2xl font-black text-[#0A2540] tracking-tight">{avgRating} / 5.0</div>
           <div className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-            <span>↑ 98% Positive Feedback</span>
+            <span>↑ {positivePercentage}% Positive Feedback</span>
           </div>
         </div>
 
@@ -238,7 +241,7 @@ export default function TechDashboard({
                           </span>
                           <span>•</span>
                           <span className="flex items-center gap-1 text-slate-600">
-                            <Clock className="w-3 h-3 text-slate-400" /> {job.time}
+                            <Clock className="w-3 h-3 text-slate-400" /> {job.timeSlot || job.time}
                           </span>
                         </div>
                       </div>

@@ -6,7 +6,8 @@ import {
   Bell, 
   ShieldAlert, 
   ChevronDown, 
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { StaggeredMenu } from './StaggeredMenu';
 
@@ -68,6 +69,11 @@ export default function TechHeader({
       label: 'Home', 
       ariaLabel: 'Return to home landing page', 
       link: '/' 
+    },
+    {
+      label: 'Log Out',
+      ariaLabel: 'Log out of technician account',
+      onClick: () => onLogout && onLogout()
     }
   ];
 
@@ -185,6 +191,16 @@ export default function TechHeader({
             >
               <ShieldAlert className="w-4 h-4 animate-bounce" />
               <span className="hidden sm:inline">Emergency</span>
+            </button>
+
+            {/* 4. Log Out Button */}
+            <button 
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all shadow-sm whitespace-nowrap"
+              title="Log Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Log Out</span>
             </button>
 
           </div>
