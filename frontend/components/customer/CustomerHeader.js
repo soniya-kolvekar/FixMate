@@ -1,12 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logoutUser } from '../../lib/firebase/auth';
+import { auth, db } from '../../lib/firebase/firebase';
+
+import { useEffect, useState } from 'react';
+
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+} from 'firebase/firestore';
 
 export default function CustomerHeader() {
   const router = useRouter();
+
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid),
+      where('isRead', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNotificationCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -33,8 +63,22 @@ export default function CustomerHeader() {
           />
         </Link>
 
-        {/* Right Side Buttons */}
+        {/* Right Side */}
         <div className="flex items-center gap-4">
+
+          {/* Notifications */}
+          <button
+            onClick={() => router.push('/customer/notifications')}
+            className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 transition"
+          >
+            <Bell size={22} className="text-[#0B2545]" />
+
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-600 text-white text-[11px] flex items-center justify-center font-semibold">
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            )}
+          </button>
 
           {/* Profile */}
           <button

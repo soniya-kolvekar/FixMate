@@ -22,6 +22,8 @@ import {
   getDocs,
   limit,
 } from 'firebase/firestore';
+import { notifyBookingCreated } from "../../../../lib/firebase/notifications";
+
 
 export default function BookingPage() {
   const router = useRouter();
@@ -151,28 +153,36 @@ timeSlot: formData.isEmergency ? null : formData.timeSlot,
         createdAt: serverTimestamp(),
       };
 
-      if (formData.isEmergency) {
-        await addDoc(
-          collection(db, 'emergencyBookings'),
-          bookingData
-        );
-      } else {
-        await addDoc(
-          collection(db, 'bookings'),
-          bookingData
-        );
-      }
+      let docRef;
 
-      alert('Booking submitted successfully.');
+if (formData.isEmergency) {
+  docRef = await addDoc(
+    collection(db, "emergencyBookings"),
+    bookingData
+  );
+} else {
+  docRef = await addDoc(
+    collection(db, "bookings"),
+    bookingData
+  );
+}
 
-      router.push('/customer/bookings');
-    } catch (error) {
-      console.error(error);
-      alert('Failed to submit booking.');
-    } finally {
-      setLoading(false);
-    }
-  };
+await notifyBookingCreated({
+  customerId: user.uid,
+  bookingId: docRef.id,
+  service,
+});
+
+alert("Booking submitted successfully.");
+
+router.push("/customer/bookings");
+} catch (error) {
+  console.error(error);
+  alert("Failed to submit booking.");
+} finally {
+  setLoading(false);
+}
+};
     return (
       <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-10 text-center font-bold text-slate-500">Loading booking form...</div>}>
 

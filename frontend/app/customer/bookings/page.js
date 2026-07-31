@@ -17,6 +17,7 @@ import {
   Wrench,
   AlertTriangle,
   Eye,
+  Home,
 } from 'lucide-react';
 
 export default function MyBookingsPage() {
@@ -150,6 +151,20 @@ export default function MyBookingsPage() {
   }
 };
   return (
+    <>
+    {/* Navbar */}
+    <nav className="bg-[#0A2540] shadow-md">
+      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <button
+          onClick={() => router.push("/customer")}
+          className="flex items-center gap-2 text-white font-semibold hover:text-blue-200 transition"
+        >
+          <Home size={20} />
+          Home
+        </button>
+      </div>
+    </nav>
+
   <main className="min-h-screen bg-slate-50 py-10">
     <div className="max-w-6xl mx-auto px-4">
 
@@ -397,5 +412,6 @@ export default function MyBookingsPage() {
 
     </div>
   </main>
+  </>
 );
 }
