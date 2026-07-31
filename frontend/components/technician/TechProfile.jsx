@@ -148,31 +148,31 @@ export default function TechProfile({
     <div className="space-y-8 antialiased max-w-5xl mx-auto">
       
       {/* Real-time Dynamic Profile Form */}
-      <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm space-y-6 relative">
+      <div className="bg-white rounded-2xl p-8 border border-slate-200/60 shadow-xs space-y-6 relative">
         
         {loading && (
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-10 rounded-3xl flex items-center justify-center gap-2 text-xs font-bold text-slate-600">
-            <Loader2 className="w-5 h-5 animate-spin text-regalNavy" />
+          <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-10 rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-[#0B2545]">
+            <Loader2 className="w-5 h-5 animate-spin text-[#134074]" />
             <span>Fetching real-time profile from Firebase...</span>
           </div>
         )}
 
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
-            <h3 className="text-lg font-extrabold text-[#0A2540] font-heading">Technician Profile & Duty Settings</h3>
-            <p className="text-xs text-slate-400 font-medium">Synced in real-time with Cloud Firestore database</p>
+            <h3 className="text-lg font-bold text-[#0B2545]">Technician Profile & Duty Settings</h3>
+            <p className="text-xs text-slate-500 font-normal mt-0.5">Synced in real-time with Cloud Firestore database</p>
           </div>
 
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition-colors flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
           >
             {isEditing ? 'Cancel Editing' : 'Edit Profile'}
           </button>
         </div>
 
         {savedSuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>Profile changes saved & updated in Firebase Cloud Firestore!</span>
           </div>
@@ -183,22 +183,22 @@ export default function TechProfile({
           {/* Profile Icon Header */}
           <div className="flex items-center gap-5">
             <div className="relative">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#134074] text-white flex items-center justify-center border-2 border-slate-200 shadow-md">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#134074] text-white flex items-center justify-center border-2 border-slate-200 shadow-xs">
                 <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </div>
             </div>
 
             <div>
-              <h4 className="text-base font-extrabold text-[#0A2540]">{profileData.name}</h4>
+              <h4 className="text-base font-bold text-[#0B2545]">{profileData.name}</h4>
               <p className="text-xs font-semibold text-slate-500">{profileData.specialization}</p>
               
               {/* Duty Toggle */}
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-[11px] font-bold text-slate-400">Current Duty Status:</span>
+                <span className="text-[11px] font-semibold text-slate-400">Current Duty Status:</span>
                 <button
                   type="button"
                   onClick={() => onToggleAvailability && onToggleAvailability()}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-extrabold border transition-all ${
+                  className={`px-3 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
                     availability === 'ONLINE' || availability === 'Available'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : availability === 'BUSY' || availability === 'Busy'
@@ -216,61 +216,61 @@ export default function TechProfile({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Full Name</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Full Name</label>
               <input 
                 type="text"
                 disabled={!isEditing}
                 value={profileData.name}
                 onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 disabled:opacity-75 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#EEF4ED]/40 border border-slate-200/80 rounded-xl text-xs font-normal text-[#0B2545] disabled:opacity-75 focus:outline-none focus:bg-white focus:border-[#134074] transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Phone Number</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Phone Number</label>
               <input 
                 type="tel"
                 disabled={!isEditing}
                 value={profileData.phone}
                 onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 disabled:opacity-75 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#EEF4ED]/40 border border-slate-200/80 rounded-xl text-xs font-normal text-[#0B2545] disabled:opacity-75 focus:outline-none focus:bg-white focus:border-[#134074] transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Service Specialization</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Service Specialization</label>
               <input 
                 type="text"
                 disabled={!isEditing}
                 value={profileData.specialization}
                 onChange={(e) => setProfileData({ ...profileData, specialization: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 disabled:opacity-75 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#EEF4ED]/40 border border-slate-200/80 rounded-xl text-xs font-normal text-[#0B2545] disabled:opacity-75 focus:outline-none focus:bg-white focus:border-[#134074] transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Years of Experience</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Years of Experience</label>
               <input 
                 type="text"
                 disabled={!isEditing}
                 value={profileData.experienceYears}
                 onChange={(e) => setProfileData({ ...profileData, experienceYears: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 disabled:opacity-75 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#EEF4ED]/40 border border-slate-200/80 rounded-xl text-xs font-normal text-[#0B2545] disabled:opacity-75 focus:outline-none focus:bg-white focus:border-[#134074] transition-all"
                 required
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Working Coverage Zone</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Working Coverage Zone</label>
               <input 
                 type="text"
                 disabled={!isEditing}
                 value={profileData.workingArea}
                 onChange={(e) => setProfileData({ ...profileData, workingArea: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 disabled:opacity-75 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#EEF4ED]/40 border border-slate-200/80 rounded-xl text-xs font-normal text-[#0B2545] disabled:opacity-75 focus:outline-none focus:bg-white focus:border-[#134074] transition-all"
                 placeholder="e.g. Indiranagar & HSR Layout, Bengaluru"
                 required
               />
@@ -283,7 +283,7 @@ export default function TechProfile({
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2.5 bg-[#0A2540] hover:bg-[#13395F] text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center gap-2 inline-flex disabled:opacity-60"
+                className="px-6 py-2.5 bg-[#134074] hover:bg-[#13315C] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 inline-flex disabled:opacity-60"
               >
                 {saving ? (
                   <>
@@ -302,11 +302,11 @@ export default function TechProfile({
 
         </form>
 
-        <div className="pt-6 border-t border-slate-200">
+        <div className="pt-6 border-t border-slate-200/80">
           <button
             type="button"
             onClick={onLogout}
-            className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
           >
             <LogOut className="w-4 h-4 text-rose-600" />
             <span>Sign Out of Technician Account</span>

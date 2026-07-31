@@ -76,7 +76,7 @@ export default function TechJobDetail({
                   ? 'bg-rose-100 text-rose-700' 
                   : 'bg-blue-100 text-blue-700'
           }`}>
-            #{job.id} • {isCancelled ? 'CANCELLED' : isCompleted ? 'COMPLETED' : job.tag || (job.isEmergency ? 'EMERGENCY' : 'STANDARD')}
+            {isCancelled ? 'CANCELLED' : isCompleted ? 'COMPLETED' : job.tag || (job.isEmergency ? 'EMERGENCY' : 'STANDARD')}
           </span>
         </div>
       </div>
@@ -118,48 +118,48 @@ export default function TechJobDetail({
       )}
 
       {/* Main Job Card */}
-      <div className={`bg-white rounded-3xl p-8 border shadow-sm space-y-8 ${isCancelled ? 'border-rose-200' : isCompleted ? 'border-emerald-200' : 'border-slate-200/80'}`}>
+      <div className={`bg-white rounded-2xl p-8 border shadow-xs space-y-8 ${isCancelled ? 'border-rose-200' : isCompleted ? 'border-emerald-200' : 'border-slate-200/60'}`}>
         
         {/* Title & Customer Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div>
-            <h2 className={`text-2xl font-black ${isCancelled ? 'text-slate-500 line-through' : 'text-[#0A2540]'}`}>{job.title}</h2>
-            <p className="text-xs text-blue-600 font-bold mt-1 flex items-center gap-1">
+            <h2 className={`text-2xl font-bold ${isCancelled ? 'text-slate-500 line-through' : 'text-[#0B2545]'}`}>{job.title}</h2>
+            <p className="text-xs text-[#134074] font-semibold mt-1 flex items-center gap-1">
               <Wrench className="w-3.5 h-3.5" /> {job.service || job.category || 'Standard Service'}
             </p>
           </div>
 
           <div className="text-right">
-            <span className="text-2xl font-black text-[#0A2540]">₹{totalAmount.toFixed(2)}</span>
-            <span className="text-xs font-semibold text-slate-400 block">Total Final Cost</span>
+            <span className="text-2xl font-bold text-[#0B2545]">₹{totalAmount.toFixed(2)}</span>
+            <span className="text-xs font-medium text-slate-400 block mt-0.5">Total Final Cost</span>
           </div>
         </div>
 
         {/* 1-Click Fast-Track Action Button */}
         {!isLocked && nextStage && (
-          <div className="bg-gradient-to-r from-[#0A2540] to-[#1D4ED8] p-5 rounded-2xl text-white flex items-center justify-between gap-4 shadow-md">
+          <div className="bg-[#134074] p-5 rounded-2xl text-white flex items-center justify-between gap-4 shadow-xs">
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-200 block">Current Stage: {workflowStages[currentStageIndex]?.label || job.status}</span>
-              <h4 className="text-base font-black">Next Action: {nextStage.label}</h4>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8DA9C4] block">Current Stage: {workflowStages[currentStageIndex]?.label || job.status}</span>
+              <h4 className="text-base font-bold mt-0.5">Next Action: {nextStage.label}</h4>
             </div>
             <button
               onClick={() => onUpdateStatus(job.id, nextStage.key)}
-              className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black shadow-lg transition-all flex items-center gap-2 shrink-0 animate-pulse hover:animate-none"
+              className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0"
             >
-              <span>1-Click Advance Status: <strong>{nextStage.label}</strong></span>
+              <span>Mark as <strong>{nextStage.label}</strong></span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* Checklist-Based Job Progress Bar */}
-        <div className="space-y-3 bg-slate-50/70 p-6 rounded-2xl border border-slate-200/60">
+        <div className="space-y-3 bg-[#EEF4ED]/40 p-6 rounded-2xl border border-slate-200/60">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">
-              Checklist Progression (Sequential Stage Lock)
+            <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+              Job Progress
             </h4>
             {isLocked && (
-              <span className={`flex items-center gap-1 text-xs font-bold ${isCancelled ? 'text-rose-600' : 'text-emerald-600'}`}>
+              <span className={`flex items-center gap-1 text-xs font-semibold ${isCancelled ? 'text-rose-600' : 'text-emerald-600'}`}>
                 <Lock className="w-3.5 h-3.5" /> Job Locked ({isCancelled ? 'Cancelled' : 'Completed'})
               </span>
             )}
@@ -179,27 +179,27 @@ export default function TechJobDetail({
                   disabled={isDisabled}
                   onClick={() => !isDisabled && onUpdateStatus(job.id, stage.key)}
                   title={isDisabled && !isLocked ? 'Complete current stage first before advancing' : ''}
-                  className={`p-3 rounded-xl text-[11px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
+                  className={`p-3 rounded-xl text-[11px] font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
                     isLocked 
                       ? isCancelled
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                         : isCurrent || isPassed
-                          ? 'bg-emerald-600 text-white shadow-sm cursor-not-allowed opacity-90'
+                          ? 'bg-emerald-600 text-white shadow-xs cursor-not-allowed opacity-90'
                           : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-40'
                       : isCurrent 
-                        ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400'
+                        ? 'bg-[#134074] text-white shadow-xs'
                         : isNextSequential
-                          ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-400 hover:bg-emerald-100 hover:shadow-md cursor-pointer animate-pulse'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-400 hover:bg-emerald-100 cursor-pointer font-bold'
                           : isPassed
-                            ? 'bg-emerald-100 text-emerald-800 opacity-90'
+                            ? 'bg-[#EEF4ED] text-[#134074]'
                             : 'bg-white border border-slate-200 text-slate-300 cursor-not-allowed opacity-40'
                   }`}
                 >
-                  <CheckCircle2 className={`w-4 h-4 ${isCurrent ? 'text-white' : isPassed ? 'text-emerald-600' : isNextSequential ? 'text-emerald-500' : 'text-slate-300'}`} />
+                  <CheckCircle2 className={`w-4 h-4 ${isCurrent ? 'text-white' : isPassed ? 'text-[#134074]' : isNextSequential ? 'text-emerald-600' : 'text-slate-300'}`} />
                   <span className="text-center leading-tight">{stage.label}</span>
                   {(isPassed || isCurrent) && (
-                    <span className="text-[9px] font-semibold opacity-85 mt-0.5 flex items-center gap-0.5">
-                      ⏱️ {job.timestamps?.[stage.key] || (stage.key === 'Assigned' ? job.assignedAt || '09:30 AM' : 'Recorded')}
+                    <span className="text-[9px] font-normal opacity-85 mt-0.5">
+                      {job.timestamps?.[stage.key] || (stage.key === 'Assigned' ? job.assignedAt || '09:30 AM' : 'Recorded')}
                     </span>
                   )}
                 </button>
@@ -212,22 +212,22 @@ export default function TechJobDetail({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Customer Info Card */}
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-            <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Customer Details</h4>
+          <div className="p-5 rounded-2xl bg-[#EEF4ED]/30 border border-slate-200/60 space-y-3">
+            <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Customer Details</h4>
             
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#0A2540] text-white flex items-center justify-center font-bold shrink-0">
-                <User className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-xl bg-[#0B2545] text-white flex items-center justify-center font-bold shrink-0">
+                <User className="w-5 h-5 text-[#8DA9C4]" />
               </div>
               <div>
-                <h4 className="text-sm font-black text-[#0A2540]">{job.customerName}</h4>
-                <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                <h4 className="text-sm font-bold text-[#0B2545]">{job.customerName}</h4>
+                <p className="text-xs text-slate-500 font-normal flex items-center gap-1 mt-0.5">
                   <Phone className="w-3 h-3 text-slate-400" /> {job.customerPhone}
                 </p>
               </div>
             </div>
 
-            <div className="pt-2 text-xs font-semibold text-slate-500 space-y-1">
+            <div className="pt-2 text-xs font-normal text-slate-600 space-y-1.5">
               <p className="flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>{job.location}</span>
@@ -236,7 +236,7 @@ export default function TechJobDetail({
                 <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>Scheduled: {job.timeSlot || job.time || '09:30 AM'}</span>
               </p>
-              <p className="flex items-center gap-1.5 text-slate-600 font-bold pt-0.5">
+              <p className="flex items-center gap-1.5 text-slate-700 font-semibold pt-0.5">
                 <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>Total Duration: {job.duration || '1 hour'}</span>
               </p>
@@ -244,14 +244,14 @@ export default function TechJobDetail({
           </div>
 
           {/* Pricing & Billing Breakdown Card */}
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 flex flex-col justify-between">
+          <div className="p-5 rounded-2xl bg-[#EEF4ED]/30 border border-slate-200/60 space-y-3 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Pricing & Extra Charges</h4>
+              <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Pricing & Extra Charges</h4>
               
               {!isLocked && (
                 <button
                   onClick={onOpenExtraCharges}
-                  className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-extrabold flex items-center gap-1 transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 text-[#134074] hover:bg-[#EEF4ED] text-xs font-semibold flex items-center gap-1 transition-colors shadow-xs"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>+ Add Extra Charges</span>
@@ -259,41 +259,41 @@ export default function TechJobDetail({
               )}
             </div>
 
-            <div className="space-y-2 text-xs font-semibold text-slate-600">
+            <div className="space-y-2 text-xs font-normal text-slate-600">
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
                 <span>Fixed Service Base Price (Locked)</span>
-                <span className="font-extrabold text-[#0A2540]">₹{fixedPrice.toFixed(2)}</span>
+                <span className="font-bold text-[#0B2545]">₹{fixedPrice.toFixed(2)}</span>
               </div>
 
               {job.extraLabour > 0 && (
                 <div className="flex justify-between items-center pb-1 border-b border-slate-200/60 text-slate-600">
                   <span>Additional Labour Charges</span>
-                  <span className="font-bold text-blue-600">+₹{job.extraLabour.toFixed(2)}</span>
+                  <span className="font-semibold text-[#134074]">+₹{job.extraLabour.toFixed(2)}</span>
                 </div>
               )}
 
               {job.extraMaterial > 0 && (
                 <div className="flex justify-between items-center pb-1 border-b border-slate-200/60 text-slate-600">
                   <span>Additional Material Charges</span>
-                  <span className="font-bold text-blue-600">+₹{job.extraMaterial.toFixed(2)}</span>
+                  <span className="font-semibold text-[#134074]">+₹{job.extraMaterial.toFixed(2)}</span>
                 </div>
               )}
 
               <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
                 <span>Total Additional Charges</span>
-                <span className="font-extrabold text-blue-600">+₹{extraCharges.toFixed(2)}</span>
+                <span className="font-bold text-[#134074]">+₹{extraCharges.toFixed(2)}</span>
               </div>
 
               {job.extraChargesReason && (
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/60 space-y-1">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Mandatory Justification Reason:</span>
-                  <p className="text-[11px] text-slate-700 font-medium italic">"{job.extraChargesReason}"</p>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">Mandatory Justification Reason:</span>
+                  <p className="text-[11px] text-slate-700 font-normal italic">"{job.extraChargesReason}"</p>
                 </div>
               )}
 
-              <div className="flex justify-between items-center pt-2 text-sm font-extrabold text-[#0A2540]">
+              <div className="flex justify-between items-center pt-2 text-sm font-bold text-[#0B2545]">
                 <span>Calculated Final Total Bill</span>
-                <span className="text-base font-black text-emerald-700">₹{totalAmount.toFixed(2)}</span>
+                <span className="text-base font-bold text-emerald-700">₹{totalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -302,8 +302,8 @@ export default function TechJobDetail({
 
         {/* Job Description & Customer Notes */}
         <div className="space-y-2">
-          <h4 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Issue Description & Notes</h4>
-          <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Issue Description & Notes</h4>
+          <p className="text-xs text-slate-600 font-normal leading-relaxed bg-[#EEF4ED]/30 p-4 rounded-2xl border border-slate-200/60">
             {job.description || job.notes || job.customerNote || "No specific customer instructions provided."}
           </p>
         </div>
@@ -315,7 +315,7 @@ export default function TechJobDetail({
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button
                 onClick={onOpenReportDelay}
-                className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-extrabold hover:bg-amber-100 transition-colors flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors flex items-center gap-2"
               >
                 <AlertTriangle className="w-4 h-4" />
                 <span>Report Delay or Request Cancellation</span>
@@ -323,7 +323,7 @@ export default function TechJobDetail({
 
               <div className="flex items-center gap-2">
                 {!serviceStartedReached && (
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200/60 hidden sm:inline-block">
+                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200/60 hidden sm:inline-block">
                     ⚠️ Complete "Service Started" stage to enable
                   </span>
                 )}
@@ -331,9 +331,9 @@ export default function TechJobDetail({
                   disabled={!serviceStartedReached}
                   onClick={() => serviceStartedReached && onUpdateStatus(job.id, 'Completed')}
                   title={!serviceStartedReached ? 'Advance to "Service Started" stage first to enable finalization' : 'Finalize and mark job completed'}
-                  className={`px-6 py-2.5 rounded-xl font-extrabold text-xs transition-all flex items-center gap-2 ${
+                  className={`px-6 py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
                     serviceStartedReached 
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md cursor-pointer'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer'
                       : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                   }`}
                 >

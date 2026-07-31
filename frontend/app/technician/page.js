@@ -36,6 +36,58 @@ export default function TechnicianModulePage() {
     return String(str).toLowerCase().replace(/[\._\-]/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
+  const resolveCustomerName = (data) => {
+    if (!data) return 'Customer';
+    const cName = data.customerName || data.customer;
+    if (cName && cName !== 'Customer' && cName !== 'customer' && String(cName).trim() !== '') {
+      return cName;
+    }
+    if (data.customerEmail && String(data.customerEmail).trim() !== '') return data.customerEmail;
+    if (data.email && String(data.email).trim() !== '') return data.email;
+    return cName || 'Customer';
+  };
+
+  const resolveJobTime = (data, isEmg) => {
+    if (!data) return '09:30 AM';
+
+    // 1. For Emergency Requests: prioritize createdAt timestamp (to indicate exact creation time)
+    if (isEmg && data.createdAt) {
+      try {
+        if (typeof data.createdAt === 'object' && data.createdAt.seconds) {
+          return new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        if (typeof data.createdAt === 'string' && data.createdAt.trim() !== '') {
+          const d = new Date(data.createdAt);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+      } catch(e) {}
+    }
+
+    // 2. Explicit time slots
+    if (data.timeSlot && data.timeSlot !== 'null' && data.timeSlot !== 'Just now') return data.timeSlot;
+    if (data.time && data.time !== 'null' && data.time !== 'Just now') return data.time;
+    if (data.scheduledTime && data.scheduledTime !== 'null') return data.scheduledTime;
+
+    // 3. Fallback to createdAt timestamp
+    if (data.createdAt) {
+      try {
+        if (typeof data.createdAt === 'object' && data.createdAt.seconds) {
+          return new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        if (typeof data.createdAt === 'string' && data.createdAt.trim() !== '') {
+          const d = new Date(data.createdAt);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+      } catch(e) {}
+    }
+
+    return '09:30 AM';
+  };
+
   // Real-time Firebase Sync & Persistent Availability for logged in Technician
   useEffect(() => {
     let unsubscribeUserDoc = null;
@@ -168,11 +220,11 @@ export default function TechnicianModulePage() {
                 service: data.service || data.serviceName || data.category || 'Service Request',
                 tag: isEmg ? 'EMERGENCY' : (data.tag || 'STANDARD'),
                 category: data.category || data.serviceCategory || 'Plumbing',
-                timeSlot: data.timeSlot || (data.time && data.time !== 'Just now' ? data.time : null) || data.scheduledTime || '09:30 AM',
-                time: data.timeSlot || (data.time && data.time !== 'Just now' ? data.time : null) || data.scheduledTime || '09:30 AM',
+                timeSlot: resolveJobTime(data, isEmg),
+                time: resolveJobTime(data, isEmg),
                 duration: data.duration || data.estimatedDuration || '1 hour',
                 location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
-                customerName: data.customerName || data.customer || 'Customer',
+                customerName: resolveCustomerName(data),
                 customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
                 customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
                 price: Number(data.price || data.cost || 499),
@@ -259,7 +311,7 @@ export default function TechnicianModulePage() {
                 title: data.title || data.serviceName || data.category || 'Emergency Service Request',
                 category: data.category || data.serviceCategory || 'Emergency Plumbing',
                 location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
-                customerName: data.customerName || data.customer || 'Customer',
+                customerName: resolveCustomerName(data),
                 customerPhone: data.customerPhone || data.phone || '+91 98123 45678',
                 price: Number(data.price || data.cost || 1499),
                 description: data.description || data.notes || data.customerNote || 'Urgent emergency repair required.',
@@ -355,9 +407,10 @@ export default function TechnicianModulePage() {
                   title: data.title || data.serviceName || data.category || 'Service Request',
                   tag: data.isEmergency ? 'EMERGENCY' : (data.tag || 'STANDARD'),
                   category: data.category || data.serviceCategory || 'Plumbing',
-                  time: data.time || data.scheduledTime || data.date || '09:30 AM',
+                  timeSlot: resolveJobTime(data, Boolean(data.isEmergency)),
+                  time: resolveJobTime(data, Boolean(data.isEmergency)),
                   location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
-                  customerName: data.customerName || data.customer || 'Customer',
+                  customerName: resolveCustomerName(data),
                   customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
                   customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
                   price: Number(data.price || data.cost || 499),
@@ -424,39 +477,42 @@ export default function TechnicianModulePage() {
 
     const emgNotifs = emergencyList.map(e => ({
       id: `emg-${e.id}`,
-      title: '🚨 Emergency Broadcast Call',
-      message: `High-priority emergency call in ${e.location}: "${e.title}"`,
+      title: 'Emergency Service Call',
+      message: `Emergency request for "${e.title || e.service || 'Service'}" in ${e.location || 'your area'}`,
       time: 'Live Broadcast',
-      type: 'EMERGENCY',
-      icon: '⚡'
+      type: 'EMERGENCY'
     }));
 
     const ratingNotifs = ratingsList.map(r => ({
       id: `rating-${r.id}`,
-      title: `⭐ ${r.rating}/5 Star Rating Received`,
-      message: `${r.customerName} rated ${r.rating} stars for "${r.service}": "${r.review}"`,
+      title: `${r.rating}/5 Star Rating`,
+      message: `${r.customerName || 'Customer'} rated ${r.rating} stars for "${r.service}": "${r.review}"`,
       time: r.date,
-      type: 'RATING',
-      icon: '⭐'
+      type: 'RATING'
     }));
 
     const assignedNotifs = jobs.filter(j => (j.status === 'Assigned' || j.status === 'Accepted') && !isCancelledJob(j)).map(j => ({
       id: `assign-${j.id}`,
-      title: '📋 Job Assigned by Dispatcher',
-      message: `Assigned #${j.id}: ${j.title} in ${j.location} • ${j.time}`,
-      time: j.time || 'Today',
-      type: 'ASSIGNMENT',
-      icon: '📋'
+      title: 'New Job Assigned',
+      message: `"${j.title || j.service || 'Service'}" in ${j.location || 'your area'} • ${j.timeSlot || j.time || 'Scheduled'}`,
+      time: j.timeSlot || j.time || 'Today',
+      type: 'ASSIGNMENT'
     }));
 
-    const cancelledNotifs = jobs.filter(j => isCancelledJob(j)).map(j => ({
-      id: `cancel-${j.id}`,
-      title: '🚫 Request Cancelled',
-      message: `Job #${j.id} cancelled. Reason: ${j.cancellationReason || 'Mid-Duty Cancellation'}`,
-      time: 'Cancelled',
-      type: 'CANCELLATION',
-      icon: '🚫'
-    }));
+    const cancelledNotifs = jobs.filter(j => isCancelledJob(j)).map(j => {
+      const cleanReason = j.cancellationReason 
+        ? j.cancellationReason.replace(/^Cancel Assignment:\s*/i, '').trim()
+        : 'Mid-Duty Cancellation';
+      const serviceName = j.title || j.service || j.category || 'Service Request';
+
+      return {
+        id: `cancel-${j.id}`,
+        title: 'Service Cancelled',
+        message: `"${serviceName}" was cancelled. Reason: ${cleanReason}`,
+        time: 'Cancelled',
+        type: 'CANCELLATION'
+      };
+    });
 
     setNotifications([...emgNotifs, ...ratingNotifs, ...assignedNotifs, ...cancelledNotifs]);
   }, [emergencyList, jobs, ratingsList]);
@@ -594,7 +650,7 @@ export default function TechnicianModulePage() {
     };
     setNotifications(prev => [newNotif, ...prev]);
 
-    showToast(`⚡ Real-Time Sync: Job #${jobId} status updated to "${nextStatus}" across all modules!`);
+    showToast(`Status updated to "${nextStatus}"`);
   };
 
   // Emergency Acceptance Handler (First-to-Accept Lock Rule)
@@ -747,7 +803,7 @@ export default function TechnicianModulePage() {
     }
     setDelayModalOpen(false);
 
-    showToast(`🚫 Job #${jobId} CANCELLED & LOCKED! Priority 10 Urgent Alert sent to Dispatcher (${DISPATCHER_EMAIL}).`);
+    showToast(`Job cancelled successfully`);
 
     const alertId = `DISP-ALERT-${Date.now()}`;
     const alertItem = {
@@ -867,7 +923,7 @@ export default function TechnicianModulePage() {
 
   return (
     <ProtectedRoute allowedRole="technician">
-      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+      <div className="min-h-screen bg-[#EEF4ED] text-[#0B2545] font-sans flex flex-col antialiased selection:bg-[#134074] selection:text-white">
         
         {/* Full-width Sticky Header with StaggeredMenu Overlay */}
         <TechHeader 
@@ -891,68 +947,74 @@ export default function TechnicianModulePage() {
         {/* Full Width Dashboard Screen Body */}
         <main className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1">
           {selectedJob ? (
-            <TechJobDetail 
-              job={selectedJob}
-              onBack={() => setSelectedJob(null)}
-              onUpdateStatus={handleUpdateStatus}
-              onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
-              onOpenReportDelay={() => setDelayModalOpen(true)}
-            />
+            <div className="animate-in fade-in duration-300">
+              <TechJobDetail 
+                job={selectedJob}
+                onBack={() => setSelectedJob(null)}
+                onUpdateStatus={handleUpdateStatus}
+                onOpenExtraCharges={() => setExtraChargesModalOpen(true)}
+                onOpenReportDelay={() => setDelayModalOpen(true)}
+              />
+            </div>
           ) : (
             <>
               {activeTab === 'dashboard' && (
-                <TechDashboard 
-                  jobs={jobs}
-                  onSelectJob={(j) => setSelectedJob(j)}
-                  onViewAllJobs={() => setActiveTab('jobs')}
-                  onTriggerEmergency={() => setEmergencyModalOpen(true)}
-                  maxCapacity={MAX_DAILY_CAPACITY}
-                  avgRating={avgRating}
-                  positivePercentage={positivePercentage}
-                />
+                <div className="animate-in fade-in duration-300">
+                  <TechDashboard 
+                    jobs={jobs}
+                    onSelectJob={(j) => setSelectedJob(j)}
+                    onViewAllJobs={() => setActiveTab('jobs')}
+                    onTriggerEmergency={() => setEmergencyModalOpen(true)}
+                    maxCapacity={MAX_DAILY_CAPACITY}
+                    avgRating={avgRating}
+                    positivePercentage={positivePercentage}
+                  />
+                </div>
               )}
 
               {activeTab === 'jobs' && (
-                <TechJobList 
-                  jobs={jobs}
-                  onSelectJob={(j) => setSelectedJob(j)}
-                />
+                <div className="animate-in fade-in duration-300">
+                  <TechJobList 
+                    jobs={jobs}
+                    onSelectJob={(j) => setSelectedJob(j)}
+                  />
+                </div>
               )}
 
               {activeTab === 'emergency' && (
-                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 space-y-6">
+                <div className="animate-in fade-in duration-300 bg-white rounded-2xl p-8 shadow-xs border border-slate-200/60 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-black text-[#0A2540]">Emergency Duty & Broadcasts — Mangaluru</h3>
-                      <p className="text-xs text-slate-500 font-medium">Real-time emergency calls and accepted urgent dispatch requests</p>
+                      <h3 className="text-xl font-bold text-[#0B2545]">Emergency Requests</h3>
+                      <p className="text-xs text-slate-500 font-normal mt-1">Urgent service calls and accepted emergency jobs</p>
                     </div>
                     {emergencyList.length > 0 && (
                       <button 
                         onClick={() => setEmergencyModalOpen(true)}
-                        className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md transition-all flex items-center gap-1.5 animate-pulse"
+                        className="px-4 py-2.5 rounded-xl bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 shadow-xs transition-all flex items-center gap-1.5"
                       >
-                        <span>⚡ View Broadcast Calls ({emergencyList.length})</span>
+                        <span>View Emergency Calls ({emergencyList.length})</span>
                       </button>
                     )}
                   </div>
 
                   {emergencyList.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                    <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                       <div>
-                        <h4 className="text-sm font-black text-rose-900">🚨 {emergencyList.length} Live Emergency Broadcast Call{emergencyList.length > 1 ? 's' : ''} Available</h4>
-                        <p className="text-xs text-rose-700 font-semibold mt-0.5">First technician to accept locks assignment. Click to view and accept.</p>
+                        <h4 className="text-sm font-bold text-rose-900">{emergencyList.length} Emergency Call{emergencyList.length > 1 ? 's' : ''} Available</h4>
+                        <p className="text-xs text-rose-700 font-normal mt-0.5">Available emergency requests in your service zone.</p>
                       </div>
                       <button 
                         onClick={() => setEmergencyModalOpen(true)}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all shrink-0"
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all shrink-0"
                       >
-                        Review Broadcast Carousel
+                        View Requests
                       </button>
                     </div>
                   )}
 
                   <div>
-                    <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">Your Accepted & Assigned Emergency Jobs</h4>
+                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Assigned Emergency Jobs</h4>
                     <TechJobList 
                       jobs={jobs.filter(j => j.isEmergency || j.tag === 'EMERGENCY')}
                       onSelectJob={(j) => setSelectedJob(j)}
@@ -962,24 +1024,28 @@ export default function TechnicianModulePage() {
               )}
 
               {activeTab === 'performance' && (
-                <TechPerformance 
-                  jobs={jobs}
-                  currentUser={currentUser}
-                  availability={availability}
-                  ratingsList={ratingsList}
-                  avgRating={avgRating}
-                  positivePercentage={positivePercentage}
-                />
+                <div className="animate-in fade-in duration-300">
+                  <TechPerformance 
+                    jobs={jobs}
+                    currentUser={currentUser}
+                    availability={availability}
+                    ratingsList={ratingsList}
+                    avgRating={avgRating}
+                    positivePercentage={positivePercentage}
+                  />
+                </div>
               )}
 
               {activeTab === 'profile' && (
-                <TechProfile 
-                  availability={availability}
-                  onToggleAvailability={handleToggleAvailability}
-                  currentUser={currentUser}
-                  onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
-                  onLogout={handleLogout}
-                />
+                <div className="animate-in fade-in duration-300">
+                  <TechProfile 
+                    availability={availability}
+                    onToggleAvailability={handleToggleAvailability}
+                    currentUser={currentUser}
+                    onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                    onLogout={handleLogout}
+                  />
+                </div>
               )}
             </>
           )}
@@ -1016,8 +1082,8 @@ export default function TechnicianModulePage() {
 
         {/* Floating Toast Notice */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-extrabold border border-blue-400/30 animate-in slide-in-from-bottom duration-300">
-            <Info className="w-4 h-4 text-blue-400 shrink-0" />
+          <div className="fixed bottom-6 right-6 z-[3000] bg-[#134074] text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-medium border border-white/20 animate-in slide-in-from-bottom duration-300">
+            <Info className="w-4 h-4 text-[#8DA9C4] shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
