@@ -16,7 +16,7 @@
 .magic-bento-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   position: relative;
   min-height: 140px;
   width: 100%;

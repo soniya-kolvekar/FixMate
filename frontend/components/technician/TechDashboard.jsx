@@ -30,22 +30,29 @@ export default function TechDashboard({
     j.status === 'cancelled' || 
     (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel'));
 
-  const parseTimeMinutes = (timeStr) => {
-    if (!timeStr) return 0;
-    if (typeof timeStr === 'string' && timeStr.includes('T')) {
-      const d = new Date(timeStr);
-      if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
-    }
+  const getTimeMinutes = (job) => {
+    const timeStr = job.timeSlot || job.time || '';
     const match = String(timeStr).match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (!match) return 0;
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const ampm = match[3];
-    if (ampm) {
-      if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
-      if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+      return hours * 60 + minutes;
     }
-    return hours * 60 + minutes;
+
+    if (job.createdAt) {
+      if (typeof job.createdAt === 'object' && job.createdAt?.seconds) {
+        return Math.floor(job.createdAt.seconds / 60);
+      }
+      const d = new Date(job.createdAt);
+      if (!isNaN(d.getTime())) return Math.floor(d.getTime() / (1000 * 60));
+    }
+
+    return 0;
   };
 
   const getJobTier = (job) => {
@@ -54,11 +61,13 @@ export default function TechDashboard({
       job.status === 'CANCELLED' || 
       job.status === 'cancelled' ||
       (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel'));
-    const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency');
+    const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency' || job.bookingCollection === 'emergencyBookings');
+    const isUrgent = Boolean(job.tag === 'URGENT' || job.priority === 'HIGH');
     
-    if (isEmg) return 1; // Tier 1: Emergency Requests (Top)
-    if (isCancelled || job.tag === 'URGENT' || job.priority === 'HIGH') return 2; // Tier 2: Urgent / Mid-Cancelled
-    return 3; // Tier 3: Normal Service Requests
+    if (isEmg && !isCancelled) return 1; // Tier 1: Emergency Requests (Top)
+    if (isUrgent && !isCancelled) return 2; // Tier 2: Urgent Requests
+    if (!isCancelled) return 3; // Tier 3: Normal Active Requests
+    return 4; // Tier 4: Cancelled Requests (Bottom)
   };
 
   const activeJobs = jobs.filter(j => j.status !== 'Completed' && !isJobCancelled(j));
@@ -70,11 +79,13 @@ export default function TechDashboard({
   const displayScheduleJobs = [...jobs].sort((a, b) => {
     const tierA = getJobTier(a);
     const tierB = getJobTier(b);
-    if (tierA !== tierB) return tierA - tierB; // Emergency (1) < Urgent/Cancelled (2) < Normal (3)
+    if (tierA !== tierB) return tierA - tierB; // Tier 1 (Emergency) -> Tier 2 (Urgent) -> Tier 3 (Normal) -> Tier 4 (Cancelled)
 
-    const timeA = parseTimeMinutes(a.time || a.createdAt);
-    const timeB = parseTimeMinutes(b.time || b.createdAt);
-    return timeA - timeB;
+    const timeA = getTimeMinutes(a);
+    const timeB = getTimeMinutes(b);
+    if (timeA !== timeB && timeA > 0 && timeB > 0) return timeA - timeB;
+
+    return String(a.id || '').localeCompare(String(b.id || ''));
   });
 
   return (
@@ -171,7 +182,7 @@ export default function TechDashboard({
       >
         
         {/* Left Column (2 Cols): Assigned Schedule Card */}
-        <ParticleCard glowColor="19, 64, 116" className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs space-y-5">
+        <ParticleCard glowColor="19, 64, 116" className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs flex flex-col justify-start space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-[#0B2545]">Today's Schedule</h3>
@@ -187,7 +198,7 @@ export default function TechDashboard({
           </div>
 
           {/* Jobs List */}
-          <div className="space-y-3">
+          <div className="space-y-3 flex flex-col justify-start">
             {displayScheduleJobs.length === 0 ? (
               <div className="text-center py-12 bg-[#EEF4ED]/40 rounded-2xl border border-dashed border-slate-200/80 text-xs font-medium text-slate-500">
                 No jobs scheduled for today
@@ -279,10 +290,10 @@ export default function TechDashboard({
         </ParticleCard>
 
         {/* Right Column (1 Col): Live Emergency & Action Box */}
-        <div className="space-y-5">
+        <div className="space-y-5 flex flex-col justify-start">
           
           {/* Emergency Card Box */}
-          <ParticleCard glowColor="225, 29, 72" className="bg-white rounded-2xl p-6 border border-rose-200 bg-rose-50/20 shadow-xs space-y-4">
+          <ParticleCard glowColor="225, 29, 72" className="bg-white rounded-2xl p-6 border border-rose-200 bg-rose-50/20 shadow-xs flex flex-col justify-start space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-rose-200/60">
               <h3 className="text-base font-bold text-rose-700 flex items-center gap-2">
                 Emergency Calls
@@ -306,7 +317,7 @@ export default function TechDashboard({
           </ParticleCard>
 
           {/* Quick Dynamic Performance Summary Card */}
-          <ParticleCard glowColor="19, 64, 116" className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs space-y-4">
+          <ParticleCard glowColor="19, 64, 116" className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs flex flex-col justify-start space-y-4">
             <h3 className="text-base font-bold text-[#0B2545]">Performance Summary</h3>
             
             <div className="space-y-3 text-xs font-medium text-slate-600">
