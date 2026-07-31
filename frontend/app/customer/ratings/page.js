@@ -11,7 +11,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase/firebase";
-import { Star } from "lucide-react";
+import { Star, Home } from "lucide-react";
 
 export default function RatingPage() {
   const router = useRouter();
@@ -88,7 +88,7 @@ export default function RatingPage() {
 
       alert("Thank you for your feedback!");
 
-      router.push("/customer/history");
+      router.push("/customer");
     } catch (error) {
       console.error(error);
       alert("Failed to submit rating.");
@@ -106,6 +106,21 @@ export default function RatingPage() {
   }
 
   return (
+    <>
+    <div className="min-h-screen bg-slate-50">
+    {/* Navbar */}
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-10">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <button
+          onClick={() => router.push("/customer")}
+          className="flex items-center gap-2 bg-[#0A2540] hover:bg-[#13395F] text-white px-4 py-2 rounded-lg transition"
+        >
+          <Home size={18} />
+          Home
+        </button>
+      </div>
+    </nav>
+    </div>
     <div className="max-w-2xl mx-auto py-10 px-6">
       <div className="bg-white rounded-2xl shadow-lg p-8">
 
@@ -170,5 +185,6 @@ export default function RatingPage() {
 
       </div>
     </div>
+    </>
   );
 }
