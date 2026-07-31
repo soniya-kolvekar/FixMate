@@ -10,7 +10,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { auth, db } from "../../lib/firebase/firebase";
+import { auth, db } from "../../../lib/firebase/firebase";
 import { Star } from "lucide-react";
 
 export default function RatingPage() {
