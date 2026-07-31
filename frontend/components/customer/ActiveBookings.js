@@ -1,5 +1,14 @@
 'use client';
+import { useEffect, useState } from "react";
+import { auth, db } from "../../lib/firebase/firebase";
+import { useRouter } from "next/navigation";
 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
 import {
   Calendar,
   Clock,
@@ -9,26 +18,35 @@ import {
 } from 'lucide-react';
 
 export default function ActiveBookings() {
-  const bookings = [
-    {
-      id: '#FM1024',
-      service: 'AC Repair',
-      technician: 'Rahul Kumar',
-      status: 'Assigned',
-      date: '28 July 2026',
-      time: '10:30 AM',
-      location: 'Mangalore',
-    },
-    {
-      id: '#FM1025',
-      service: 'Plumbing',
-      technician: 'Not Assigned',
-      status: 'Pending',
-      date: '29 July 2026',
-      time: '2:00 PM',
-      location: 'Surathkal',
-    },
-  ];
+  const [bookings, setBookings] = useState([]);
+  const router = useRouter();
+  useEffect(() => {
+  const user = auth.currentUser;
+
+  if (!user) return;
+
+  const q = query(
+    collection(db, "bookings"),
+    where("customerId", "==", user.uid)
+  );
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const activeBookings = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter(
+        (booking) =>
+          booking.status !== "Completed" &&
+          booking.status !== "Cancelled"
+      );
+
+    setBookings(activeBookings);
+  });
+
+  return () => unsubscribe();
+}, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -49,7 +67,18 @@ export default function ActiveBookings() {
   return (
     <section>
       <div className="space-y-5">
-        {bookings.map((booking) => (
+        {bookings.length === 0 ? (
+  <div className="bg-white rounded-xl p-8 text-center">
+    <h3 className="text-xl font-semibold">
+      No Active Bookings
+    </h3>
+
+    <p className="text-slate-500 mt-2">
+      You don't have any active service requests.
+    </p>
+  </div>
+) : (
+  bookings.map((booking) => (
           <div
             key={booking.id}
             className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition p-6"
@@ -73,17 +102,17 @@ export default function ActiveBookings() {
                 <div className="grid sm:grid-cols-2 gap-3 text-slate-600">
                   <div className="flex items-center gap-2">
                     <User size={18} />
-                    <span>{booking.technician}</span>
+                    <span> {booking.technicianName || "Not Assigned"} </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Calendar size={18} />
-                    <span>{booking.date}</span>
+                    <span>{booking.date || "Emergency Booking"}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Clock size={18} />
-                    <span>{booking.time}</span>
+                    <span>{booking.timeSlot || "-"}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -93,13 +122,17 @@ export default function ActiveBookings() {
                 </div>
               </div>
 
-              <button className="flex items-center gap-2 bg-[#0A2540] hover:bg-[#13395F] text-white px-5 py-3 rounded-xl transition font-semibold">
-                View Details
-                <ArrowRight size={18} />
-              </button>
+              <button
+  onClick={() => router.push(`/customer/bookings/${booking.id}`)}
+  className="flex items-center gap-2 bg-[#0A2540] hover:bg-[#13395F] text-white px-5 py-3 rounded-xl transition font-semibold"
+>
+  View Details
+  <ArrowRight size={18} />
+</button>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </section>
   );
