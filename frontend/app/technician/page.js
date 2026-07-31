@@ -29,71 +29,91 @@ export default function TechnicianModulePage() {
 
   // Authentication & Technician Profile State (Mangaluru Region Focus)
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
-  const [currentUser, setCurrentUser] = useState({
-    name: 'Rajesh Kumar',
-    email: 'rajesh.kumar@fixmate.in',
-    phone: '+91 98765 43210',
-    specialization: 'Master Plumber',
-    experienceYears: '8',
-    workingArea: 'Kodialbail & Hampankatta, Mangaluru',
-    status: 'Available'
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const normalizeTechName = (str) => {
+    if (!str) return '';
+    return String(str).toLowerCase().replace(/[\._\-]/g, ' ').replace(/\s+/g, ' ').trim();
+  };
 
   // Real-time Firebase Sync & Persistent Availability for logged in Technician
   useEffect(() => {
     let unsubscribeUserDoc = null;
     let unsubscribeTechDoc = null;
 
-    // 1. Immediately restore cached availability from localStorage on mount (preserves state across refresh)
+    // 1. Immediately restore cached availability from localStorage on mount
     try {
       const cached = localStorage.getItem('fixmate_tech_availability');
       if (cached) setAvailability(cached);
     } catch(e) {}
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      const targetUid = user?.uid || 'tech_rajesh_kumar';
+      // Clear jobs, ratings, and selections from previous user session on auth change
+      setJobs([]);
+      setSelectedJob(null);
+      setRatingsList([]);
+
+      if (!user) {
+        setCurrentUser(null);
+        return;
+      }
+
+      const targetUid = user.uid;
+      const defaultDerivedName = user.displayName || (user.email ? user.email.split('@')[0].replace(/[\._\-]/g, ' ') : 'Technician');
+      const formattedName = defaultDerivedName.replace(/\b\w/g, c => c.toUpperCase());
+
+      setCurrentUser({
+        uid: targetUid,
+        name: formattedName,
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+        specialization: 'Technician',
+        experienceYears: '5',
+        workingArea: 'Mangaluru Region',
+        status: 'Available'
+      });
 
       const userDocRef = doc(db, 'users', targetUid);
       const techDocRef = doc(db, 'technicians', targetUid);
 
+      const updateTechProfileFromDb = (data) => {
+        if (!data) return;
+        const dbName = data.name || data.fullName || data.displayName;
+        const dbStatus = data.availability || data.status;
+
+        if (dbStatus) {
+          setAvailability(dbStatus);
+          try {
+            localStorage.setItem('fixmate_tech_availability', dbStatus);
+            localStorage.setItem(`fixmate_tech_availability_${targetUid}`, dbStatus);
+          } catch(e) {}
+        }
+
+        setCurrentUser(prev => ({
+          ...prev,
+          uid: targetUid,
+          name: dbName || prev?.name || user?.displayName || 'Technician',
+          email: data.email || user?.email || prev?.email || '',
+          phone: data.phone || data.mobile || data.phoneNumber || prev?.phone || '',
+          specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev?.specialization || 'General Services',
+          experienceYears: String(data.experienceYears || data.experience || prev?.experienceYears || '5'),
+          workingArea: data.workingArea || data.serviceArea || 'Mangaluru Region',
+          avatarUrl: data.avatarUrl || prev?.avatarUrl || '',
+          status: dbStatus || prev?.status || 'Available'
+        }));
+      };
+
       // 2. Real-time subscription to technicians collection in Firestore
       unsubscribeTechDoc = onSnapshot(techDocRef, (docSnap) => {
         if (docSnap.exists()) {
-          const data = docSnap.data();
-          const dbStatus = data.availability || data.status;
-          if (dbStatus) {
-            setAvailability(dbStatus);
-            try {
-              localStorage.setItem('fixmate_tech_availability', dbStatus);
-              localStorage.setItem(`fixmate_tech_availability_${targetUid}`, dbStatus);
-            } catch(e) {}
-          }
+          updateTechProfileFromDb(docSnap.data());
         }
       }, (err) => console.warn('Tech doc snapshot warning:', err));
 
       // 3. Real-time subscription to users collection in Firestore
       unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
-          const data = docSnap.data();
-          const dbStatus = data.availability || data.status;
-          if (dbStatus) {
-            setAvailability(dbStatus);
-            try {
-              localStorage.setItem('fixmate_tech_availability', dbStatus);
-            } catch(e) {}
-          }
-          setCurrentUser(prev => ({
-            ...prev,
-            uid: targetUid,
-            name: data.name || data.fullName || user?.displayName || prev.name,
-            email: data.email || user?.email || prev.email,
-            phone: data.phone || data.mobile || prev.phone,
-            specialization: data.specialization || (data.skills && data.skills.join(', ')) || prev.specialization,
-            experienceYears: String(data.experienceYears || data.experience || prev.experienceYears),
-            workingArea: data.workingArea || data.serviceArea || 'Kodialbail & Hampankatta, Mangaluru',
-            avatarUrl: data.avatarUrl || prev.avatarUrl,
-            status: dbStatus || prev.status
-          }));
+          updateTechProfileFromDb(docSnap.data());
         }
       }, (err) => console.warn('User doc snapshot warning:', err));
 
@@ -103,24 +123,32 @@ export default function TechnicianModulePage() {
         const bookingsColRef = collection(db, 'bookings');
 
         const syncAssignedJobs = (snapshotDocs) => {
-          const techName = currentUser?.name || 'Rajesh Kumar';
-          const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+          const techName = (currentUser?.name || user?.displayName || '').toLowerCase().trim();
+          const techUid = user?.uid || currentUser?.uid;
+          const techEmail = (currentUser?.email || user?.email || '').toLowerCase().trim();
+
+          if (!techUid && !techName && !techEmail) return;
 
           snapshotDocs.forEach(docSnap => {
             const data = docSnap.data();
-            
-            // STRICT ASSIGNMENT FILTER: Only show jobs explicitly assigned to this technician by Dispatcher
-            const isAssignedToMe = 
-              (data.assignedTechId && data.assignedTechId === techUid) ||
-              (data.technicianId && data.technicianId === techUid) ||
-              (data.assignedTechName && data.assignedTechName.toLowerCase() === techName.toLowerCase()) ||
-              (data.technicianName && data.technicianName.toLowerCase() === techName.toLowerCase()) ||
-              (data.assignedTo && (data.assignedTo.toLowerCase() === techName.toLowerCase() || data.assignedTo === techUid)) ||
-              (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase()) ||
-              (data.recommendedTech && data.recommendedTech.toLowerCase() === techName.toLowerCase()) ||
-              (data.assignedTech && data.assignedTech.toLowerCase() === techName.toLowerCase()) ||
-              (data.technician && data.technician.toLowerCase() === techName.toLowerCase()) ||
-              (data.status === 'Assigned' && (!data.technicianName || data.technicianName.toLowerCase() === techName.toLowerCase()));
+
+            const docTechId = data.assignedTechId || data.technicianId || data.acceptedByTechId || data.techId;
+            const docTechName = (data.technicianName || data.assignedTechName || data.assignedTo || data.assignedTechnician || data.recommendedTech || data.technician || '').toLowerCase().trim();
+            const docTechEmail = (data.technicianEmail || data.assignedTechEmail || data.techEmail || '').toLowerCase().trim();
+
+            // Strictly REJECT if job belongs explicitly to a different technician ID or name
+            if (docTechId && techUid && docTechId !== techUid) return;
+            if (docTechName && techName && docTechName !== techName && !docTechName.includes(techName) && !techName.includes(docTechName)) return;
+            if (docTechEmail && techEmail && docTechEmail !== techEmail) return;
+
+            // Match if ID, Name, or Email matches
+            const isAssignedToMe = Boolean(
+              (techUid && docTechId && docTechId === techUid) ||
+              (techName && docTechName && (docTechName === techName || docTechName.includes(techName) || techName.includes(docTechName))) ||
+              (techEmail && docTechEmail && docTechEmail === techEmail)
+            );
+
+            if (!isAssignedToMe) return;
 
             const isEmg = Boolean(
               data.isEmergency === true ||
@@ -137,10 +165,13 @@ export default function TechnicianModulePage() {
               const formattedJob = {
                 id: docSnap.id || data.id || data.jobId,
                 title: data.title || data.serviceName || data.category || 'Service Request',
+                service: data.service || data.serviceName || data.category || 'Service Request',
                 tag: isEmg ? 'EMERGENCY' : (data.tag || 'STANDARD'),
                 category: data.category || data.serviceCategory || 'Plumbing',
-                time: data.time || data.scheduledTime || data.date || '09:30 AM',
-                location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                timeSlot: data.timeSlot || (data.time && data.time !== 'Just now' ? data.time : null) || data.scheduledTime || '09:30 AM',
+                time: data.timeSlot || (data.time && data.time !== 'Just now' ? data.time : null) || data.scheduledTime || '09:30 AM',
+                duration: data.duration || data.estimatedDuration || '1 hour',
+                location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
                 customerName: data.customerName || data.customer || 'Customer',
                 customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
                 customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
@@ -227,7 +258,7 @@ export default function TechnicianModulePage() {
                 id: docSnap.id || data.id,
                 title: data.title || data.serviceName || data.category || 'Emergency Service Request',
                 category: data.category || data.serviceCategory || 'Emergency Plumbing',
-                location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
                 customerName: data.customerName || data.customer || 'Customer',
                 customerPhone: data.customerPhone || data.phone || '+91 98123 45678',
                 price: Number(data.price || data.cost || 1499),
@@ -246,6 +277,55 @@ export default function TechnicianModulePage() {
           else setEmergencyList([]);
         }, (err) => console.warn('Emergency bookings snapshot warning:', err));
 
+        // 6. Real-Time Customer Ratings & Feedback Subscription
+        onSnapshot(collection(db, 'ratings'), (snap) => {
+          if (!snap.empty) {
+            const list = [];
+            const myUid = auth.currentUser?.uid || currentUser?.uid;
+            const myNameNorm = normalizeTechName(currentUser?.name || user?.displayName);
+            const myEmailNorm = (currentUser?.email || user?.email || '').toLowerCase().trim();
+
+            const myJobIds = new Set(jobs.map(j => j.id).filter(Boolean));
+
+            snap.docs.forEach(docSnap => {
+              const data = docSnap.data();
+              const docTechId = data.technicianId || data.techId;
+              const docNameNorm = normalizeTechName(data.technicianName || data.assignedTechName);
+              const docEmailNorm = (data.technicianEmail || data.assignedTechEmail || '').toLowerCase().trim();
+              const ratingBookingId = data.bookingId;
+
+              const isBookingMatch = Boolean(ratingBookingId && myJobIds.has(ratingBookingId));
+              const isNameMatch = Boolean(myNameNorm && docNameNorm && (docNameNorm === myNameNorm || docNameNorm.includes(myNameNorm) || myNameNorm.includes(docNameNorm)));
+              const isEmailMatch = Boolean(myEmailNorm && docEmailNorm && docEmailNorm === myEmailNorm);
+              const isIdMatch = Boolean(myUid && docTechId && docTechId === myUid);
+
+              // Hard reject only if docNameNorm explicitly conflicts WITH someone else AND is not our assigned booking
+              if (!isBookingMatch) {
+                if (!docTechId && !docNameNorm && !docEmailNorm) return;
+                if (docNameNorm && myNameNorm && docNameNorm !== myNameNorm && !docNameNorm.includes(myNameNorm) && !myNameNorm.includes(docNameNorm)) return;
+                if (docEmailNorm && myEmailNorm && docEmailNorm !== myEmailNorm) return;
+                if (docTechId && myUid && docTechId !== myUid && !isNameMatch) return;
+              }
+
+              if (isNameMatch || isEmailMatch || isIdMatch || isBookingMatch) {
+                list.push({
+                  id: docSnap.id,
+                  bookingId: data.bookingId || docSnap.id,
+                  rating: Number(data.rating || 5),
+                  review: data.review || data.comment || '',
+                  customerName: data.customerName || data.customer || 'Customer',
+                  service: data.service || data.category || 'Service Request',
+                  date: data.createdAt ? (data.createdAt.seconds ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : 'Today') : 'Just now'
+                });
+              }
+            });
+
+            setRatingsList(list);
+          } else {
+            setRatingsList([]);
+          }
+        }, (err) => console.warn('Ratings snapshot warning:', err));
+
         // 6. Sync assigned jobs from localStorage & window custom events
         const syncLocalAssignedJobs = () => {
           try {
@@ -254,17 +334,20 @@ export default function TechnicianModulePage() {
             const techUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
 
             localAssigned.forEach(data => {
-              const isAssignedToMe = 
-                (data.assignedTechId && data.assignedTechId === techUid) ||
-                (data.technicianId && data.technicianId === techUid) ||
-                (data.assignedTechName && data.assignedTechName.toLowerCase() === techName.toLowerCase()) ||
-                (data.technicianName && data.technicianName.toLowerCase() === techName.toLowerCase()) ||
-                (data.assignedTo && (data.assignedTo.toLowerCase() === techName.toLowerCase() || data.assignedTo === techUid)) ||
-                (data.assignedTechnician && data.assignedTechnician.toLowerCase() === techName.toLowerCase()) ||
-                (data.recommendedTech && data.recommendedTech.toLowerCase() === techName.toLowerCase()) ||
-                (data.assignedTech && data.assignedTech.toLowerCase() === techName.toLowerCase()) ||
-                (data.technician && data.technician.toLowerCase() === techName.toLowerCase()) ||
-                (data.status === 'Assigned');
+              const techName = (currentUser?.name || user?.displayName || '').toLowerCase().trim();
+              const techUid = user?.uid || currentUser?.uid;
+
+              const docTechId = data.assignedTechId || data.technicianId || data.acceptedByTechId || data.techId;
+              const docTechName = (data.technicianName || data.assignedTechName || data.assignedTo || '').toLowerCase().trim();
+
+              // Strictly reject if job belongs to another technician
+              if (docTechId && techUid && docTechId !== techUid) return;
+              if (docTechName && techName && docTechName !== techName && !docTechName.includes(techName) && !techName.includes(docTechName)) return;
+
+              const isAssignedToMe = Boolean(
+                (techUid && docTechId && docTechId === techUid) ||
+                (techName && docTechName && (docTechName === techName || docTechName.includes(techName) || techName.includes(docTechName)))
+              );
 
               if (isAssignedToMe && data.id) {
                 const formattedJob = {
@@ -273,7 +356,7 @@ export default function TechnicianModulePage() {
                   tag: data.isEmergency ? 'EMERGENCY' : (data.tag || 'STANDARD'),
                   category: data.category || data.serviceCategory || 'Plumbing',
                   time: data.time || data.scheduledTime || data.date || '09:30 AM',
-                  location: data.location || data.address || 'Kodialbail & Hampankatta, Mangaluru',
+                  location: data.customerAddress || data.address || data.location || 'Adyar, Mangaluru',
                   customerName: data.customerName || data.customer || 'Customer',
                   customerAvatar: data.customerAvatar || data.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
                   customerPhone: data.customerPhone || data.phone || data.mobile || '+91 98123 45678',
@@ -326,10 +409,12 @@ export default function TechnicianModulePage() {
   const [extraChargesModalOpen, setExtraChargesModalOpen] = useState(false);
   const [delayModalOpen, setDelayModalOpen] = useState(false);
 
-  // Pure Dynamic Assigned Jobs List & Real-Time Emergency Broadcasts List
+  // Pure Dynamic Assigned Jobs List & Real-Time Emergency Broadcasts List & Ratings List
   const [jobs, setJobs] = useState([]);
   const [emergencyList, setEmergencyList] = useState([]);
-  // Dynamic Real-Time Notifications Stream (Emergency Broadcasts -> Dispatcher Assignments -> Cancelled Requests)
+  const [ratingsList, setRatingsList] = useState([]);
+
+  // Dynamic Real-Time Notifications Stream (Emergency Broadcasts -> Rating Reviews -> Dispatcher Assignments -> Cancelled Requests)
   useEffect(() => {
     const isCancelledJob = (j) => 
       j.status === 'Cancelled' || 
@@ -344,6 +429,15 @@ export default function TechnicianModulePage() {
       time: 'Live Broadcast',
       type: 'EMERGENCY',
       icon: '⚡'
+    }));
+
+    const ratingNotifs = ratingsList.map(r => ({
+      id: `rating-${r.id}`,
+      title: `⭐ ${r.rating}/5 Star Rating Received`,
+      message: `${r.customerName} rated ${r.rating} stars for "${r.service}": "${r.review}"`,
+      time: r.date,
+      type: 'RATING',
+      icon: '⭐'
     }));
 
     const assignedNotifs = jobs.filter(j => (j.status === 'Assigned' || j.status === 'Accepted') && !isCancelledJob(j)).map(j => ({
@@ -364,8 +458,14 @@ export default function TechnicianModulePage() {
       icon: '🚫'
     }));
 
-    setNotifications([...emgNotifs, ...assignedNotifs, ...cancelledNotifs]);
-  }, [emergencyList, jobs]);
+    setNotifications([...emgNotifs, ...ratingNotifs, ...assignedNotifs, ...cancelledNotifs]);
+  }, [emergencyList, jobs, ratingsList]);
+
+  // Dynamic Rating Metrics Calculations
+  const totalRatingSum = ratingsList.reduce((acc, r) => acc + r.rating, 0);
+  const avgRating = ratingsList.length > 0 ? (totalRatingSum / ratingsList.length).toFixed(2) : '0.00';
+  const positiveCount = ratingsList.filter(r => r.rating >= 4).length;
+  const positivePercentage = ratingsList.length > 0 ? Math.round((positiveCount / ratingsList.length) * 100) : 0;
 
   const [notifications, setNotifications] = useState([]);
 
@@ -725,6 +825,34 @@ export default function TechnicianModulePage() {
     showToast(message);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Firebase signOut error:', err);
+    }
+
+    try {
+      localStorage.removeItem('fixmate_user');
+      localStorage.removeItem('fixmate_tech_availability');
+      localStorage.removeItem('fixmate_assigned_jobs');
+      localStorage.removeItem('fixmate_urgent_dispatches');
+    } catch (e) {}
+
+    setJobs([]);
+    setSelectedJob(null);
+    setEmergencyList([]);
+    setRatingsList([]);
+    setNotifications([]);
+    setCurrentUser(null);
+
+    showToast('🔒 Logged out successfully! Account state cleared.');
+
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
+
   const getPageTitle = () => {
     if (selectedJob) return `Job Details: #${selectedJob.id}`;
     switch (activeTab) {
@@ -757,6 +885,7 @@ export default function TechnicianModulePage() {
             setSelectedJob(null);
           }}
           currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* Full Width Dashboard Screen Body */}
@@ -778,6 +907,8 @@ export default function TechnicianModulePage() {
                   onViewAllJobs={() => setActiveTab('jobs')}
                   onTriggerEmergency={() => setEmergencyModalOpen(true)}
                   maxCapacity={MAX_DAILY_CAPACITY}
+                  avgRating={avgRating}
+                  positivePercentage={positivePercentage}
                 />
               )}
 
@@ -835,6 +966,9 @@ export default function TechnicianModulePage() {
                   jobs={jobs}
                   currentUser={currentUser}
                   availability={availability}
+                  ratingsList={ratingsList}
+                  avgRating={avgRating}
+                  positivePercentage={positivePercentage}
                 />
               )}
 
@@ -844,6 +978,7 @@ export default function TechnicianModulePage() {
                   onToggleAvailability={handleToggleAvailability}
                   currentUser={currentUser}
                   onUpdateProfile={(updated) => setCurrentUser(prev => ({ ...prev, ...updated }))}
+                  onLogout={handleLogout}
                 />
               )}
             </>

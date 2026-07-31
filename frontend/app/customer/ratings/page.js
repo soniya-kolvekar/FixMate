@@ -60,15 +60,22 @@ export default function RatingPage() {
     setSubmitting(true);
 
     try {
+      const techId = booking?.technicianId || booking?.assignedTechId || booking?.acceptedByTechId || booking?.techId || null;
+      const techName = booking?.technicianName || booking?.assignedTechName || booking?.assignedTechnician || booking?.assignedTo || booking?.technician || "";
+      const techEmail = booking?.technicianEmail || booking?.assignedTechEmail || "";
+      const custName = booking?.customerName || booking?.customer || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || "Customer";
+
       // Firestore automatically creates the "ratings" collection
       await addDoc(collection(db, "ratings"), {
         bookingId,
         bookingCollection: collectionName,
-        customerId: auth.currentUser.uid,
-        technicianId: booking.technicianId || null,
-        technicianName: booking.technicianName || "",
-        service: booking.service,
-        category: booking.category,
+        customerId: auth.currentUser?.uid || "",
+        customerName: custName,
+        technicianId: techId,
+        technicianName: techName,
+        technicianEmail: techEmail,
+        service: booking?.service || booking?.serviceName || booking?.title || booking?.category || "Service Request",
+        category: booking?.category || booking?.serviceCategory || "General",
         rating,
         review,
         createdAt: serverTimestamp(),

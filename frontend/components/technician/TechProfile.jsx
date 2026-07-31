@@ -17,14 +17,16 @@ import {
   ShieldAlert, 
   TrendingUp,
   Loader2,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 
 export default function TechProfile({ 
   availability = 'Available', 
   onToggleAvailability,
   currentUser,
-  onUpdateProfile
+  onUpdateProfile,
+  onLogout
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -32,12 +34,12 @@ export default function TechProfile({
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    name: currentUser?.name || 'Rajesh Kumar',
-    phone: currentUser?.phone || '+91 98765 43210',
-    email: currentUser?.email || 'rajesh.kumar@fixmate.in',
-    specialization: currentUser?.specialization || 'Master Plumber',
-    experienceYears: currentUser?.experienceYears || '8',
-    workingArea: currentUser?.workingArea || 'Kodialbail & Hampankatta, Mangaluru',
+    name: currentUser?.name || auth.currentUser?.displayName || 'Technician',
+    phone: currentUser?.phone || auth.currentUser?.phoneNumber || '',
+    email: currentUser?.email || auth.currentUser?.email || '',
+    specialization: currentUser?.specialization || 'General Services',
+    experienceYears: currentUser?.experienceYears || '5',
+    workingArea: currentUser?.workingArea || 'Mangaluru Region',
     avatarUrl: currentUser?.avatarUrl || '',
     availability: availability || 'Available'
   });
@@ -47,7 +49,11 @@ export default function TechProfile({
     let unsubscribeDoc = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      const targetUid = user?.uid || currentUser?.uid || 'tech_rajesh_kumar';
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const targetUid = user.uid;
       const userDocRef = doc(db, 'users', targetUid);
 
       // Subscribe to real-time updates from Firestore
@@ -295,6 +301,17 @@ export default function TechProfile({
           )}
 
         </form>
+
+        <div className="pt-6 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4 text-rose-600" />
+            <span>Sign Out of Technician Account</span>
+          </button>
+        </div>
 
       </div>
 
