@@ -12,7 +12,8 @@ import {
   FileText,
   Lock,
   ChevronRight,
-  Ban
+  Ban,
+  Wrench
 } from 'lucide-react';
 
 export default function TechJobDetail({ 
@@ -123,7 +124,9 @@ export default function TechJobDetail({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div>
             <h2 className={`text-2xl font-black ${isCancelled ? 'text-slate-500 line-through' : 'text-[#0A2540]'}`}>{job.title}</h2>
-            <p className="text-xs text-slate-400 font-medium mt-1">Single-Click Checklist Workflow • Stage Sequential Progression</p>
+            <p className="text-xs text-blue-600 font-bold mt-1 flex items-center gap-1">
+              <Wrench className="w-3.5 h-3.5" /> {job.service || job.category || 'Standard Service'}
+            </p>
           </div>
 
           <div className="text-right">
@@ -231,7 +234,11 @@ export default function TechJobDetail({
               </p>
               <p className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>Scheduled: {job.time}</span>
+                <span>Scheduled: {job.timeSlot || job.time || '09:30 AM'}</span>
+              </p>
+              <p className="flex items-center gap-1.5 text-slate-600 font-bold pt-0.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>Total Duration: {job.duration || '1 hour'}</span>
               </p>
             </div>
           </div>
