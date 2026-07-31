@@ -14,7 +14,10 @@ import {
 export default function TechPerformance({ 
   jobs = [], 
   currentUser,
-  availability = 'Available'
+  availability = 'Available',
+  ratingsList = [],
+  avgRating = '4.92',
+  positivePercentage = 98
 }) {
   // 1. Pure Dynamic Metric Calculations (No hardcoded offset additions)
   const jobsCompletedToday = jobs.filter(j => j.status === 'Completed').length;
@@ -88,7 +91,7 @@ export default function TechPerformance({
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-center shrink-0 space-y-1">
           <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Overall Customer Rating</span>
           <div className="text-3xl font-black text-amber-400 flex items-center justify-center gap-1.5">
-            <Star className="w-7 h-7 fill-amber-400 text-amber-400" /> 4.92
+            <Star className="w-7 h-7 fill-amber-400 text-amber-400" /> {avgRating}
           </div>
           <p className="text-[11px] font-semibold text-slate-200">Based on verified reviews in Mangaluru</p>
         </div>
@@ -111,7 +114,7 @@ export default function TechPerformance({
           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Completed</span>
           <h3 className="text-2xl font-black text-emerald-600">{totalJobsCompleted}</h3>
           <span className="text-[10px] font-bold text-blue-600 bg-blue-50 py-0.5 px-2 rounded-full">
-            Dynamic Total
+            Lifetime Jobs
           </span>
         </div>
 
@@ -169,22 +172,28 @@ export default function TechPerformance({
             </div>
 
             <div className="space-y-4">
-              {reviews.map((rev) => (
-                <div key={rev.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-xs text-[#0A2540]">{rev.customer}</span>
-                      <span className="text-[10px] text-slate-400 font-semibold">• {rev.service}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-amber-500 font-black text-xs">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{rev.rating}</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium italic">"{rev.comment}"</p>
-                  <span className="text-[10px] text-slate-400 font-bold block text-right">{rev.date}</span>
+              {ratingsList.length === 0 ? (
+                <div className="text-center py-10 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs font-bold text-slate-400">
+                  ⭐ No customer ratings or feedback received yet for this technician account.
                 </div>
-              ))}
+              ) : (
+                ratingsList.map((rev) => (
+                  <div key={rev.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 hover:bg-white hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-[#0A2540]">{rev.customerName || rev.customer}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold">• {rev.service}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-amber-500 font-black text-xs bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{rev.rating} / 5</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium italic">"{rev.review || rev.comment}"</p>
+                    <span className="text-[10px] text-slate-400 font-bold block text-right">{rev.date}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
