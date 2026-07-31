@@ -46,12 +46,6 @@ export default function TechniciansRosterTab({
 
             <div className="flex justify-between items-center text-xs pt-1">
               <span className="text-[10px] text-slate-400 font-bold">📍 Grid Sector: {tech.zone}</span>
-              <button 
-                onClick={() => showToast(`Opening chat with ${tech.name}`)}
-                className="text-[10px] font-bold text-blue-600 hover:underline"
-              >
-                Ping Radio
-              </button>
             </div>
           </div>
         ))}

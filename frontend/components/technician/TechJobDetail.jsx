@@ -39,8 +39,7 @@ export default function TechJobDetail({
     job.status === 'Cancelled' || 
     job.status === 'CANCELLED' || 
     job.status === 'cancelled' || 
-    (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel')) ||
-    Boolean(job.cancellationReason);
+    (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel'));
   const isLocked = isCompleted || isCancelled;
 
   const currentStageIndex = workflowStages.findIndex(s => s.key === job.status);

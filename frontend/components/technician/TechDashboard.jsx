@@ -25,8 +25,7 @@ export default function TechDashboard({
     j.status === 'Cancelled' || 
     j.status === 'CANCELLED' || 
     j.status === 'cancelled' || 
-    (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel')) ||
-    Boolean(j.cancellationReason);
+    (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel'));
 
   const parseTimeMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -50,7 +49,8 @@ export default function TechDashboard({
     const isCancelled = 
       job.status === 'Cancelled' || 
       job.status === 'CANCELLED' || 
-      Boolean(job.cancellationReason);
+      job.status === 'cancelled' ||
+      (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel'));
     const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency');
     
     if (isEmg) return 1; // Tier 1: Emergency Requests (Top)
@@ -177,8 +177,7 @@ export default function TechDashboard({
                   job.status === 'Cancelled' || 
                   job.status === 'CANCELLED' || 
                   job.status === 'cancelled' || 
-                  (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel')) ||
-                  Boolean(job.cancellationReason);
+                  (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel'));
 
                 const isEmergency = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency');
 
