@@ -23,6 +23,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { notifyBookingCreated } from "../../../../lib/firebase/notifications";
+import { doc, getDoc } from "firebase/firestore";
 
 
 export default function BookingPage() {
@@ -45,7 +46,7 @@ useEffect(() => {
     }));
   }
 }, [emergency]);
-
+  
   const category = searchParams.get('category');
   const service = searchParams.get('service');
   const price = searchParams.get('price');
@@ -101,6 +102,8 @@ useEffect(() => {
     e.preventDefault();
 
     const user = auth.currentUser;
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+const userData = userDoc.data();
 
     if (!user) {
       alert('Please login again.');
@@ -126,6 +129,7 @@ useEffect(() => {
         customerId: user.uid,
         customerName: user.displayName || '',
         customerEmail: user.email,
+        customerAddress: userData.address,
 
         category,
         service,

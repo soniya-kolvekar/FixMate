@@ -10,7 +10,7 @@ export const serviceCategories = {
     {
       id: "electrical-2",
       name: "Fan Installation",
-      description: "Install ceiling or wall-mounted fans.",
+      description: "Install ceiling or wall-mounted fans with proper asthetics.",
       price: 350,
       duration: "45 mins",
     },
