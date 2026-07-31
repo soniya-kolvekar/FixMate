@@ -10,54 +10,81 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// In-Memory Data / Mock Database Storage
+// In-Memory Data / Mock Database Storage (Tailored to India)
 const servicesCatalog = [
-  { id: 'plumbing', name: 'Plumbing', price: 49, icon: '🔧', desc: 'Pipe repair, leak fixing, tap installation' },
-  { id: 'electrical', name: 'Electrical', price: 59, icon: '⚡', desc: 'Wiring, circuit breaker, lighting fixtures' },
-  { id: 'ac_service', name: 'AC Service', price: 69, icon: '❄️', desc: 'Air conditioning cleaning & duct maintenance' },
-  { id: 'carpentry', name: 'Carpentry', price: 79, icon: '🔨', desc: 'Furniture assembly & custom woodwork' },
-  { id: 'painting', name: 'Painting', price: 149, icon: '🎨', desc: 'Interior & exterior home painting' },
-  { id: 'cleaning', name: 'Cleaning', price: 89, icon: '🧹', desc: 'Deep sanitation & carpet cleaning' },
-  { id: 'appliances', name: 'Appliances', price: 59, icon: '⚙️', desc: 'Refrigerator, oven & washer repairs' },
-  { id: 'pest_control', name: 'Pest Control', price: 99, icon: '🛡️', desc: 'Eco-friendly pest inspection & removal' }
+  { id: 'plumbing', name: 'Plumbing', price: 399, desc: 'Pipe repair, leak fixing, tap installation' },
+  { id: 'electrical', name: 'Electrical', price: 499, desc: 'Wiring, circuit breaker, lighting fixtures' },
+  { id: 'ac_service', name: 'AC Service', price: 699, desc: 'Air conditioning cleaning & gas maintenance' },
+  { id: 'carpentry', name: 'Carpentry', price: 599, desc: 'Furniture assembly & custom woodwork' },
+  { id: 'painting', name: 'Painting', price: 1499, desc: 'Interior & exterior home painting' },
+  { id: 'cleaning', name: 'Cleaning', price: 899, desc: 'Deep sanitation & carpet cleaning' },
+  { id: 'appliances', name: 'Appliances', price: 499, desc: 'Refrigerator, microwave & washer repairs' },
+  { id: 'pest_control', name: 'Pest Control', price: 999, desc: 'Eco-friendly pest inspection & removal' }
 ];
 
 const mockBookings = [];
 const mockEmergencies = [];
+const mockDispatches = [
+  { 
+    id: 'DISP-4820', 
+    title: 'Main Pipe Burst & Floor Flooding', 
+    time: '4 mins ago', 
+    address: '104 MG Road, Kodialbail, Mangaluru', 
+    priority: 'Priority Level 10', 
+    category: 'PLUMBING', 
+    type: 'RESIDENTIAL', 
+    icon: '💧', 
+    colorClass: 'bg-rose-50 border-rose-100 hover:border-rose-300', 
+    iconBg: 'bg-rose-100 text-rose-600',
+    recommendedTech: 'Rajesh Kumar',
+    techSpecialty: 'Plumbing',
+    distance: '1.2 km away',
+    price: '1499.00',
+    customerName: 'Priya Sharma',
+    targetDispatcher: 'dispatcher@fixmate.com',
+    region: 'Mangaluru, Karnataka'
+  }
+];
 
 const portalDashboards = {
   customer: {
-    title: 'Customer Dashboard',
+    title: 'Customer Dashboard — Mangaluru',
     role: 'Customer',
+    region: 'Mangaluru, Karnataka',
     activeBooking: { id: 'FM-9841', service: 'Plumbing Repair', status: 'Technician En Route', eta: '14 mins' },
     history: [
-      { id: 'FM-7712', service: 'AC Maintenance', date: '2026-06-15', cost: '$69.00', status: 'Completed' },
-      { id: 'FM-6029', service: 'Electrical Fix', date: '2026-05-02', cost: '$59.00', status: 'Completed' }
+      { id: 'FM-7712', service: 'AC Maintenance', date: '2026-06-15', cost: '₹699.00', status: 'Completed' },
+      { id: 'FM-6029', service: 'Electrical Fix', date: '2026-05-02', cost: '₹499.00', status: 'Completed' }
     ]
   },
   technician: {
-    title: 'Technician Job Hub',
+    title: 'Technician Job Hub — Mangaluru',
     role: 'Technician',
-    technicianName: 'Alex Vance (Master Plumber)',
+    region: 'Mangaluru, Karnataka',
+    technicianName: 'Rajesh Kumar (Master Plumber)',
     assignedJobs: [
-      { id: 'JOB-301', customer: 'Sarah Jenkins', service: 'Sink Overflow Repair', address: '742 Evergreen Terr.', time: '10:30 AM', price: '$120.00' },
-      { id: 'JOB-302', customer: 'David Kim', service: 'Water Heater Check', address: '104 Maple Ave.', time: '02:00 PM', price: '$95.00' }
+      { id: 'JOB-301', customer: 'Priya Sharma', service: 'Sink Overflow Repair', address: '104 MG Road, Kodialbail, Mangaluru', time: '10:30 AM', price: '₹499.00' },
+      { id: 'JOB-302', customer: 'Aarav Mehta', service: 'Geyser Pressure Check', address: '742 Hampankatta Main Rd, Mangaluru', time: '02:00 PM', price: '₹699.00' }
     ]
   },
   dispatcher: {
-    title: 'Dispatcher Routing Center',
+    title: 'Dispatcher Control Terminal — Mangaluru',
     role: 'Dispatcher',
+    region: 'Mangaluru, Karnataka',
     metrics: { activeTechnicians: 18, pendingDispatches: 2, avgResponseMinutes: 16 },
+    dispatcherEmail: 'dispatcher@fixmate.com',
     routes: [
-      { zone: 'North Metro', techCount: 6, status: 'Optimal' },
-      { zone: 'Downtown Sector', techCount: 8, status: 'High Demand' },
-      { zone: 'South Suburbs', techCount: 4, status: 'Normal' }
+      { zone: 'Kodialbail & Hampankatta, Mangaluru', techCount: 6, status: 'Optimal' },
+      { zone: 'Kadri & Bejai, Mangaluru', techCount: 8, status: 'High Demand' },
+      { zone: 'Surathkal & Mukka, Mangaluru', techCount: 4, status: 'Normal' }
     ]
   },
   admin: {
-    title: 'Admin Command Center',
+    title: 'Admin Command Center — Mangaluru Operations',
     role: 'Admin',
-    analytics: { totalUsers: 14250, completedJobs: 15480, satisfactionRate: '98.6%', monthlyRevenue: '$210,400' },
+    region: 'Mangaluru, Karnataka',
+    adminEmail: 'admin@fixmate.com',
+    analytics: { totalUsers: 14250, completedJobs: 15480, satisfactionRate: '98.6%', monthlyRevenue: '₹21,04,000' },
     pendingApprovals: 4
   }
 };
@@ -74,6 +101,69 @@ app.get('/api/services', (req, res) => {
   res.json({ success: true, data: servicesCatalog });
 });
 
+// Dispatches API (Get dispatches / delay & cancellation broadcasts)
+app.get('/api/dispatches', (req, res) => {
+  res.json({ success: true, data: mockDispatches });
+});
+
+// Update Technician Availability Status (Available / Busy / Offline)
+app.put('/api/technicians/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status, availability } = req.body;
+  const newStatus = status || availability || 'Available';
+  
+  res.json({
+    success: true,
+    message: `Technician ${id} status updated to ${newStatus}`,
+    data: { id, status: newStatus, availability: newStatus, updatedAt: new Date().toISOString() }
+  });
+});
+
+// Real-Time Booking Status Sync across Customer, Dispatcher, Admin & Technician
+app.post('/api/bookings/status', (req, res) => {
+  const { jobId, status, technicianName, updatedAt } = req.body;
+  if (!jobId || !status) {
+    return res.status(400).json({ success: false, error: 'Job ID and status required' });
+  }
+
+  res.json({
+    success: true,
+    message: `Job #${jobId} status updated to ${status} across all portals.`,
+    data: { jobId, status, technicianName: technicianName || 'Rajesh Kumar', updatedAt: updatedAt || new Date().toISOString() }
+  });
+});
+app.post('/api/dispatches', (req, res) => {
+  const item = req.body;
+  if (!item || !item.id) {
+    return res.status(400).json({ success: false, error: 'Invalid dispatch payload' });
+  }
+
+  // Assign target dispatcher if missing
+  if (!item.targetDispatcher) {
+    item.targetDispatcher = 'dispatcher@fixmate.com';
+  }
+
+  // Push to top of list
+  const existsIndex = mockDispatches.findIndex(d => d.id === item.id);
+  if (existsIndex !== -1) {
+    mockDispatches[existsIndex] = { ...mockDispatches[existsIndex], ...item };
+  } else {
+    mockDispatches.unshift(item);
+  }
+
+  res.json({ success: true, message: 'Urgent dispatch alert recorded', data: item });
+});
+
+// Delete / Resolve dispatch
+app.delete('/api/dispatches/:id', (req, res) => {
+  const id = req.params.id;
+  const index = mockDispatches.findIndex(d => d.id === id);
+  if (index !== -1) {
+    mockDispatches.splice(index, 1);
+  }
+  res.json({ success: true, message: 'Dispatch resolved / removed' });
+});
+
 // Create Booking
 app.post('/api/bookings', (req, res) => {
   const { serviceId, address, dateTime, customerEmail } = req.body;
@@ -86,7 +176,7 @@ app.post('/api/bookings', (req, res) => {
     serviceId,
     address,
     dateTime: dateTime || new Date().toISOString(),
-    customerEmail: customerEmail || 'guest@fixmate.io',
+    customerEmail: customerEmail || 'guest@fixmate.in',
     createdAt: new Date().toISOString(),
     status: 'Confirmed'
   };
@@ -108,7 +198,7 @@ app.post('/api/emergency', (req, res) => {
     phone,
     address,
     etaMinutes: Math.floor(15 + Math.random() * 20),
-    assignedTechnician: 'Officer Mark Davies (Emergency Crew #4)',
+    assignedTechnician: 'Officer Rajesh Kumar (Emergency Unit #4)',
     timestamp: new Date().toISOString()
   };
 
@@ -127,5 +217,5 @@ app.get('/api/portals/:role', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 FixMate Node.js Backend running on http://localhost:${PORT}`);
+  console.log(`FixMate Node.js Backend running on http://localhost:${PORT}`);
 });
