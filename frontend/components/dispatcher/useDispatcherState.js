@@ -388,26 +388,13 @@ export default function useDispatcherState() {
     return requests.length;
   }, [requests]);
 
-  const pendingEmergenciesCount = useMemo(() => {
-    const unassignedEmergencyRequests = requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED');
-    const emergencyDispatchItems = dispatches.filter(d => 
-      (d.priority && (d.priority.includes('10') || d.priority.includes('9') || d.priority.includes('8'))) ||
-      d.type === 'URGENT' || 
-      d.category === 'CANCELLATION' ||
-      d.isEmergency
-    );
-
-    const uniqueEmergencyIds = new Set([
-      ...unassignedEmergencyRequests.map(r => r.id),
-      ...emergencyDispatchItems.map(d => d.id || d.jobId)
-    ]);
-
-    return uniqueEmergencyIds.size;
-  }, [requests, dispatches]);
-
   const emergencyRequests = useMemo(() => {
     return requests.filter(r => r.isEmergency && r.status === 'UNASSIGNED');
   }, [requests]);
+
+  const pendingEmergenciesCount = useMemo(() => {
+    return emergencyRequests.length;
+  }, [emergencyRequests]);
   
   const [notifications, setNotifications] = useState([]);
 
