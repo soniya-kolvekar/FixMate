@@ -30,24 +30,6 @@ export default function ServiceRequestsTab({
           <h3 className="text-2xl font-black text-[#0A2540] tracking-tight">Service Requests</h3>
           <p className="text-xs text-slate-400 font-semibold mt-0.5">Monitor and dispatch incoming service calls across the region.</p>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => {
-              showToast('🎛️ Reset filters to default');
-              handleServiceTypeChange('All');
-              handleStatusChange('All');
-            }}
-            className="px-4 py-2 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
-          >
-            <span>🎛️ Filters</span>
-          </button>
-          <button 
-            onClick={handleExportCSV}
-            className="px-4 py-2 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
-          >
-            <span>📥 Export CSV</span>
-          </button>
-        </div>
       </div>
 
       {/* Metrics cards row */}
@@ -56,9 +38,8 @@ export default function ServiceRequestsTab({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unassigned</span>
-            <span className="text-3xl font-extrabold text-[#0A2540] mt-1 inline-flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-[#0A2540] mt-1 block">
               {unassignedRequestsCount}
-              <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">+3 new</span>
             </span>
           </div>
         </div>
@@ -92,7 +73,7 @@ export default function ServiceRequestsTab({
               <option value="Plumbing">Plumbing</option>
               <option value="AC Maintenance">AC Maintenance</option>
               <option value="Electrical">Electrical</option>
-              <option value="Appliance">Appliance</option>
+              <option value="Painting">Painting</option>
               <option value="Cleaning">Cleaning</option>
             </select>
           </div>

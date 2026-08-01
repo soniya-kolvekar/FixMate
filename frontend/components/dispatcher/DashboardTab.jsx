@@ -21,18 +21,38 @@ export default function DashboardTab({
   handleOpenAssign,
   setIsMapExpanded,
   showToast,
-  emergencyRequests = []
+  emergencyRequests = [],
+  requests = []
 }) {
-  // Urgent dispatches sorted first
+  // Urgent dispatches (excluding emergency requests which are shown in the Emergency Broadcasts box above)
   const sortedDispatches = React.useMemo(() => {
-    return [...dispatches].sort((a, b) => {
+    const emergencyIds = new Set(emergencyRequests.map(r => r.id));
+    const seenKeys = new Set();
+    const result = [];
+
+    for (const d of dispatches) {
+      if (!d) continue;
+      if (d.isEmergency || emergencyIds.has(d.id) || emergencyIds.has(d.jobId)) continue;
+      const s = (d.status || '').toUpperCase();
+      if (s === 'ASSIGNED' || s.includes('ASSIGN') || s.includes('COMPLET')) continue;
+
+      const key = d.jobId || d.reqId || d.id;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+
+      result.push(d);
+    }
+
+    result.sort((a, b) => {
       const aUrgent = (a.priority && a.priority.includes('10')) || a.type === 'URGENT';
       const bUrgent = (b.priority && b.priority.includes('10')) || b.type === 'URGENT';
       if (aUrgent && !bUrgent) return -1;
       if (!aUrgent && bUrgent) return 1;
       return 0;
     });
-  }, [dispatches]);
+
+    return result;
+  }, [dispatches, emergencyRequests]);
 
   const techniciansOnlineCount = React.useMemo(() => {
     return technicians.filter(tech => tech.status && tech.status.toLowerCase() !== 'offline').length;
@@ -107,12 +127,12 @@ export default function DashboardTab({
               <Flame size={12} className="animate-bounce" />
               Pending Emergency
             </span>
-            <h3 className="text-3xl font-black text-red-650 mt-1">
+            <h3 className="text-3xl font-black text-red-600 mt-1">
               {pendingEmergenciesCount < 10 ? `0${pendingEmergenciesCount}` : pendingEmergenciesCount}
             </h3>
           </div>
           <div className="flex flex-col items-end gap-2.5">
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-red-550 text-red-600 border border-red-100">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
               High Priority
             </span>
             <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-500">
@@ -127,12 +147,12 @@ export default function DashboardTab({
       <div className="bg-white border-2 border-red-500 rounded-2xl shadow-md overflow-hidden animate-in fade-in duration-200">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-red-50/30">
           <div>
-            <h4 className="text-base font-extrabold text-red-750 flex items-center gap-1.5 animate-pulse">
+            <h4 className="text-base font-extrabold text-red-700 flex items-center gap-1.5 animate-pulse">
               🚨 Emergency Broadcasts
             </h4>
-            <p className="text-xs text-slate-500 font-semibold">Unassigned emergency calls from database</p>
+            <p className="text-xs text-slate-500 font-semibold">Unassigned emergency calls</p>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-650 border border-red-200">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 border border-red-200">
             {emergencyRequests.length} Live
           </span>
         </div>
@@ -140,7 +160,7 @@ export default function DashboardTab({
         <div className="p-6 space-y-4">
           {emergencyRequests.length === 0 ? (
             <div className="text-center py-8 text-sm font-semibold text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-              🎉 No pending emergency calls in database!
+              🎉 No pending emergency calls!
             </div>
           ) : (
             emergencyRequests.map((req) => (
@@ -171,10 +191,7 @@ export default function DashboardTab({
                   </div>
                 </div>
 
-                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
-                  <span className="text-sm font-black text-red-600">
-                    Priority 10
-                  </span>
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-end gap-3 shrink-0">
                   <button
                     onClick={() => handleOpenAssign({
                       id: req.id,
@@ -189,9 +206,16 @@ export default function DashboardTab({
                       isEmergency: true,
                       collectionName: req.collectionName,
                       customerName: req.customer,
-                      techSpecialty: req.service
+                      description: req.description,
+                      notes: req.notes,
+                      requestPreviousTechnician: Boolean(req.requestPreviousTechnician),
+                      techSpecialty: req.service,
+                      cancelledBy: req.cancelledBy,
+                      cancelledTechName: req.cancelledTechName,
+                      cancelledTechs: req.cancelledTechs,
+                      technicianName: (req.assignedTech && req.assignedTech !== req.customer) ? req.assignedTech : (req.cancelledTechName || req.cancelledBy || null)
                     })}
-                    className="px-5 py-2.5 bg-red-650 hover:bg-red-750 text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
                   >
                     Assign Now
                   </button>
@@ -223,57 +247,99 @@ export default function DashboardTab({
               🎉 All urgent broadcasts assigned!
             </div>
           ) : (
-            sortedDispatches.map((disp) => (
-              <div 
-                key={disp.id} 
-                className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${disp.colorClass}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm ${disp.iconBg}`}>
-                    {disp.icon}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h5 className="font-extrabold text-slate-800 text-sm">{disp.title}</h5>
-                      <span className="text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
-                        {disp.time}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 font-medium mt-1">
-                      {disp.address} • <span className="font-extrabold text-[#0A2540]">{disp.priority}</span>
-                    </p>
-                    
-                    <div className="flex items-center gap-2 flex-wrap mt-2.5">
-                      <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                        {disp.category}
-                      </span>
-                      <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                        {disp.type}
-                      </span>
-                      {disp.recommendedTech && (
-                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-blue-100/80 text-blue-700 border border-blue-200 flex items-center gap-1">
-                          ⭐ Recommended Match: {disp.recommendedTech} ({disp.distance})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            sortedDispatches.map((disp) => {
+              const targetReq = (requests || []).find(r => 
+                (r.id && (r.id === disp.id || r.id === disp.reqId || r.id === disp.jobId))
+              );
+              const categoryStr = `${targetReq?.service || ''} ${disp.category || ''} ${disp.techSpecialty || ''} ${disp.service || ''} ${disp.serviceName || ''} ${disp.title || ''} ${disp.description || ''}`.toLowerCase();
+              
+              let trade = '';
+              let badge = 'PLUMBING';
+              if (categoryStr.includes('carpen')) { trade = 'Carpentry'; badge = 'CARPENTRY'; }
+              else if (categoryStr.includes('plumb')) { trade = 'Plumbing'; badge = 'PLUMBING'; }
+              else if (categoryStr.includes('elect')) { trade = 'Electrical'; badge = 'ELECTRICAL'; }
+              else if (categoryStr.includes('ac ') || categoryStr.includes('ac_') || categoryStr.includes('hvac') || categoryStr.includes('air conditioning') || categoryStr.includes('maintenance')) { trade = 'AC Maintenance'; badge = 'AC REPAIR'; }
+              else if (categoryStr.includes('clean')) { trade = 'Cleaning'; badge = 'HOME CLEANING'; }
+              else if (categoryStr.includes('appliance') || categoryStr.includes('microwave') || categoryStr.includes('fridge') || categoryStr.includes('washing')) { trade = 'Appliance Repair'; badge = 'APPLIANCE'; }
+              else if (categoryStr.includes('paint')) { trade = 'Painting'; badge = 'PAINTING'; }
+              else if (categoryStr.includes('pest')) { trade = 'Pest Control'; badge = 'PEST CONTROL'; }
+              else {
+                let clean = (disp.service || disp.category || disp.title || 'Plumbing')
+                  .replace(/MID-SERVICE CANCELLATION REQUEST/gi, '')
+                  .replace(/CANCELLATION REQUEST/gi, '')
+                  .replace(/EMERGENCY/gi, '')
+                  .replace(/URGENT/gi, '')
+                  .replace(/-?\s*#[A-Za-z0-9]+/g, '')
+                  .replace(/[-–—🚨⚡]/g, '')
+                  .trim();
+                if (clean && clean.toLowerCase() !== 'service' && clean.toLowerCase() !== 'service request') {
+                  trade = clean.charAt(0).toUpperCase() + clean.slice(1);
+                  badge = clean.toUpperCase();
+                } else {
+                  trade = 'Plumbing';
+                  badge = 'PLUMBING';
+                }
+              }
 
-                <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
-                  {disp.price && (
-                    <span className="text-sm font-black text-emerald-600">
-                      ₹{disp.price}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleOpenAssign(disp)}
-                    className="px-5 py-2.5 bg-[#0A2540] hover:bg-[#13395F] text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
-                  >
-                    Assign Now
-                  </button>
+              return (
+                <div 
+                  key={disp.id} 
+                  className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${disp.colorClass}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm ${disp.iconBg}`}>
+                      {disp.icon || '🚨'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h5 className="font-extrabold text-slate-800 text-sm">
+                          🚨 {trade} Request
+                        </h5>
+                        <span className="text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
+                          {disp.time}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium mt-1">
+                        {disp.address}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                        <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                          {badge}
+                        </span>
+                        <span className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                          {disp.type || 'URGENT'}
+                        </span>
+                        {disp.recommendedTech && (
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-blue-100/80 text-blue-700 border border-blue-200 flex items-center gap-1">
+                            ⭐ Recommended Match: {disp.recommendedTech} ({disp.distance})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-3 shrink-0">
+                    {disp.price && (
+                      <span className="text-sm font-black text-emerald-600">
+                        ₹{disp.price}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleOpenAssign({
+                        ...disp,
+                        category: trade.toUpperCase(),
+                        service: trade,
+                        techSpecialty: trade
+                      })}
+                      className="px-5 py-2.5 bg-[#0A2540] hover:bg-[#13395F] text-white text-xs font-bold rounded-xl shadow-md transition-all whitespace-nowrap"
+                    >
+                      Assign Now
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
