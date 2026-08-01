@@ -5,6 +5,8 @@ import { User, LogOut, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { logoutUser } from '../../lib/firebase/auth';
 import { auth, db } from '../../lib/firebase/firebase';
+import NotificationWatcher from "./NotificationWatcher";
+import NotificationBell from "./NotificationBell";
 
 import { useEffect, useState } from 'react';
 
@@ -48,6 +50,11 @@ export default function CustomerHeader() {
   };
 
   return (
+
+    <>
+      <NotificationWatcher />
+
+      
     <header className="sticky top-0 z-50 h-20 bg-white border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
 
@@ -102,5 +109,6 @@ export default function CustomerHeader() {
 
       </div>
     </header>
+    </>
   );
 }

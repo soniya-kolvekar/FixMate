@@ -9,12 +9,13 @@ import DashboardTab from '../../components/dispatcher/DashboardTab';
 import ServiceRequestsTab from '../../components/dispatcher/ServiceRequestsTab';
 import TechniciansRosterTab from '../../components/dispatcher/TechniciansRosterTab';
 import LiveMapTab from '../../components/dispatcher/LiveMapTab';
-import AuditLogsTab from '../../components/dispatcher/AuditLogsTab';
 import AssignTechnicianModal from '../../components/dispatcher/AssignTechnicianModal';
 import NewDispatchModal from '../../components/dispatcher/NewDispatchModal';
 import ExpandedMapModal from '../../components/dispatcher/ExpandedMapModal';
 
-export default function DispatcherDashboard() {
+import { Suspense } from 'react';
+
+function DispatcherContent() {
   const state = useDispatcherState();
 
   return (
@@ -92,18 +93,11 @@ export default function DispatcherDashboard() {
           />
         )}
 
-        {state.activeTab === 'logs' && (
-          <AuditLogsTab
-            logs={state.logs}
-            setLogs={state.setLogs}
-            showToast={state.showToast}
-          />
-        )}
       </main>
 
       {/* Toast Notification */}
       {state.toast && (
-        <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-white px-6 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-semibold animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-6 right-6 z-[3000] bg-[#0A2540] text-[#FFFFFF] px-6 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-semibold animate-in slide-in-from-bottom duration-300">
           <span>ℹ️</span>
           <span>{state.toast}</span>
         </div>
@@ -135,5 +129,13 @@ export default function DispatcherDashboard() {
       />
 
     </div>
+  );
+}
+
+export default function DispatcherDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center font-bold text-slate-500">Loading Dispatcher Portal...</div>}>
+      <DispatcherContent />
+    </Suspense>
   );
 }

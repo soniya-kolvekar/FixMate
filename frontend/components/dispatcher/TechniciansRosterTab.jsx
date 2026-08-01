@@ -39,8 +39,8 @@ export default function TechniciansRosterTab({
                 <span className="font-extrabold text-[#0A2540]">{tech.assigned} Active Jobs</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold block">Transit Runs</span>
-                <span className="font-extrabold text-[#0A2540]">{tech.travel} Drives</span>
+                <span className="text-[10px] text-slate-400 font-bold block">Tasks Completed</span>
+                <span className="font-extrabold text-[#0A2540]">{tech.completed || 0} Tasks</span>
               </div>
             </div>
 

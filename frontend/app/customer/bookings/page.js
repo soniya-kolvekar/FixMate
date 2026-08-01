@@ -343,34 +343,80 @@ export default function MyBookingsPage() {
 
               {/* Price */}
 
-              <div className="grid md:grid-cols-2 gap-5 mt-6">
+              {/* Price Details */}
 
-                <div>
+<div className="mt-6 border rounded-xl p-6">
 
-                  <p className="text-gray-500">
-                    Estimated Price
-                  </p>
+  <h3 className="text-lg font-bold mb-5">
+    Price Details
+  </h3>
 
-                  <p className="font-semibold text-green-600">
-                    ₹{booking.price}
-                  </p>
+  <div className="space-y-4">
 
-                </div>
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Estimated Price
+      </span>
 
-                <div>
+      <span className="font-semibold text-blue-600">
+        ₹{booking.price || 0}
+      </span>
+    </div>
 
-                  <p className="text-gray-500">
-                    Estimated Duration
-                  </p>
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Extra Labour Charges
+      </span>
 
-                  <p className="font-semibold">
-                    {booking.duration}
-                  </p>
+      <span className="font-semibold text-orange-600">
+        ₹{booking.extraLabour || 0}
+      </span>
+    </div>
 
-                </div>
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        Extra Material Charges
+      </span>
 
-              </div>
+      <span className="font-semibold text-orange-600">
+        ₹{booking.extraMaterial || 0}
+      </span>
+    </div>
 
+    <hr />
+
+    <div className="flex justify-between text-lg">
+
+      <span className="font-bold">
+        Final Price
+      </span>
+
+      <span className="font-bold text-green-600">
+        ₹
+        {booking.finalTotalBill ||
+          (
+            Number(booking.price || 0) +
+            Number(booking.extraLabour || 0) +
+            Number(booking.extraMaterial || 0)
+          )}
+      </span>
+
+    </div>
+
+  </div>
+
+</div>
+{booking.extraChargesReason && (
+  <div className="mt-6 border rounded-xl p-6">
+    <h3 className="font-bold mb-2">
+      Reason for Additional Charges
+    </h3>
+
+    <p className="text-gray-600">
+      {booking.extraChargesReason}
+    </p>
+  </div>
+)}
               {/* Buttons */}
 
               <div className="mt-8 flex flex-wrap gap-4">

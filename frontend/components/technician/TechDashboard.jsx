@@ -13,6 +13,7 @@ import {
   ChevronRight,
   User
 } from 'lucide-react';
+import MagicBento, { ParticleCard } from './MagicBento';
 
 export default function TechDashboard({ 
   jobs = [], 
@@ -29,22 +30,29 @@ export default function TechDashboard({
     j.status === 'cancelled' || 
     (typeof j.status === 'string' && j.status.toLowerCase().includes('cancel'));
 
-  const parseTimeMinutes = (timeStr) => {
-    if (!timeStr) return 0;
-    if (typeof timeStr === 'string' && timeStr.includes('T')) {
-      const d = new Date(timeStr);
-      if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
-    }
+  const getTimeMinutes = (job) => {
+    const timeStr = job.timeSlot || job.time || '';
     const match = String(timeStr).match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (!match) return 0;
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const ampm = match[3];
-    if (ampm) {
-      if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
-      if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+      return hours * 60 + minutes;
     }
-    return hours * 60 + minutes;
+
+    if (job.createdAt) {
+      if (typeof job.createdAt === 'object' && job.createdAt?.seconds) {
+        return Math.floor(job.createdAt.seconds / 60);
+      }
+      const d = new Date(job.createdAt);
+      if (!isNaN(d.getTime())) return Math.floor(d.getTime() / (1000 * 60));
+    }
+
+    return 0;
   };
 
   const getJobTier = (job) => {
@@ -53,11 +61,13 @@ export default function TechDashboard({
       job.status === 'CANCELLED' || 
       job.status === 'cancelled' ||
       (typeof job.status === 'string' && job.status.toLowerCase().includes('cancel'));
-    const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency');
+    const isEmg = Boolean(job.isEmergency || job.tag === 'EMERGENCY' || job.category === 'Emergency' || job.bookingCollection === 'emergencyBookings');
+    const isUrgent = Boolean(job.tag === 'URGENT' || job.priority === 'HIGH');
     
-    if (isEmg) return 1; // Tier 1: Emergency Requests (Top)
-    if (isCancelled || job.tag === 'URGENT' || job.priority === 'HIGH') return 2; // Tier 2: Urgent / Mid-Cancelled
-    return 3; // Tier 3: Normal Service Requests
+    if (isEmg && !isCancelled) return 1; // Tier 1: Emergency Requests (Top)
+    if (isUrgent && !isCancelled) return 2; // Tier 2: Urgent Requests
+    if (!isCancelled) return 3; // Tier 3: Normal Active Requests
+    return 4; // Tier 4: Cancelled Requests (Bottom)
   };
 
   const activeJobs = jobs.filter(j => j.status !== 'Completed' && !isJobCancelled(j));
@@ -69,99 +79,118 @@ export default function TechDashboard({
   const displayScheduleJobs = [...jobs].sort((a, b) => {
     const tierA = getJobTier(a);
     const tierB = getJobTier(b);
-    if (tierA !== tierB) return tierA - tierB; // Emergency (1) < Urgent/Cancelled (2) < Normal (3)
+    if (tierA !== tierB) return tierA - tierB; // Tier 1 (Emergency) -> Tier 2 (Urgent) -> Tier 3 (Normal) -> Tier 4 (Cancelled)
 
-    const timeA = parseTimeMinutes(a.time || a.createdAt);
-    const timeB = parseTimeMinutes(b.time || b.createdAt);
-    return timeA - timeB;
+    const timeA = getTimeMinutes(a);
+    const timeB = getTimeMinutes(b);
+    if (timeA !== timeB && timeA > 0 && timeB > 0) return timeA - timeB;
+
+    return String(a.id || '').localeCompare(String(b.id || ''));
   });
 
   return (
     <div className="space-y-7 antialiased">
       
-      {/* Top Row: 4 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Top Row: 4 Metric Cards with MagicBento Particle Spotlight Effect */}
+      <MagicBento 
+        glowColor="19, 64, 116"
+        spotlightRadius={280}
+        particleCount={10}
+        enableTilt={true}
+        enableMagnetism={true}
+        clickEffect={true}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
         
         {/* Metric 1: Assigned Jobs */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-2">
+        <ParticleCard glowColor="19, 64, 116" className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-xs space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-slate-400">Assigned Jobs</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-xs font-semibold text-slate-400">Assigned Jobs</span>
+            <div className="w-8 h-8 rounded-xl bg-[#EEF4ED] text-[#134074] flex items-center justify-center">
               <Briefcase className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#0A2540] tracking-tight">{activeJobs.length} Active</div>
-          <div className="text-xs font-bold text-blue-600 flex items-center gap-1">
+          <div className="text-2xl font-bold text-[#0B2545] tracking-tight">{activeJobs.length} Active</div>
+          <div className="text-xs font-medium text-[#134074] flex items-center gap-1">
             <span>Scheduled for today</span>
           </div>
-        </div>
+        </ParticleCard>
 
         {/* Metric 2: Emergency Alerts */}
-        <div 
+        <ParticleCard 
           onClick={onTriggerEmergency}
-          className="bg-white rounded-2xl p-5 border-2 border-rose-500 bg-rose-50/30 shadow-sm space-y-2 cursor-pointer hover:shadow-md transition-all"
+          glowColor="225, 29, 72"
+          className="bg-white rounded-2xl p-5 border border-rose-200 bg-rose-50/20 shadow-xs space-y-2 cursor-pointer hover:shadow-md hover:border-rose-300 transition-all"
         >
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-rose-600 flex items-center gap-1">
-              <Flame className="w-4 h-4 animate-bounce" /> Emergency Jobs
+            <span className="text-xs font-semibold text-rose-600 flex items-center gap-1">
+              Emergency Jobs
             </span>
-            <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-rose-100/70 text-rose-600 flex items-center justify-center">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-600 tracking-tight">
+          <div className="text-2xl font-bold text-rose-600 tracking-tight">
             {emergencyJobs.length > 0 ? `${emergencyJobs.length} Pending` : '0 Active'}
           </div>
-          <div className="text-xs font-bold text-rose-600">
-            High Priority Dispatch Broadcast
+          <div className="text-xs font-medium text-rose-600">
+            Urgent Requests
           </div>
-        </div>
+        </ParticleCard>
 
         {/* Metric 3: Daily Workload Capacity */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-2">
+        <ParticleCard glowColor="217, 119, 6" className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-xs space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-slate-400">Daily Workload</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-xs font-semibold text-slate-400">Daily Workload</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#0A2540] tracking-tight">
+          <div className="text-2xl font-bold text-[#0B2545] tracking-tight">
             {totalJobsHandledToday} / {maxCapacity} Jobs
           </div>
-          <div className="text-xs font-bold text-slate-500">
+          <div className="text-xs font-medium text-slate-500">
             {capacityPercentage}% Capacity Used
           </div>
-        </div>
+        </ParticleCard>
 
         {/* Metric 4: Satisfaction & Rating */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-sm space-y-2">
+        <ParticleCard glowColor="5, 150, 105" className="bg-[#FFFFFF] rounded-2xl p-5 border border-slate-200/60 shadow-xs space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-slate-400">Technician Rating</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-xs font-semibold text-slate-400">Technician Rating</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Star className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#0A2540] tracking-tight">{avgRating} / 5.0</div>
-          <div className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-            <span>↑ {positivePercentage}% Positive Feedback</span>
+          <div className="text-2xl font-bold text-[#0B2545] tracking-tight">{avgRating} / 5.0</div>
+          <div className="text-xs font-medium text-emerald-600 flex items-center gap-1">
+            <span>{positivePercentage}% Positive Feedback</span>
           </div>
-        </div>
+        </ParticleCard>
 
-      </div>
+      </MagicBento>
 
       {/* Main Section: Schedule & Urgent Broadcast Callout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <MagicBento 
+        glowColor="19, 64, 116"
+        spotlightRadius={320}
+        particleCount={10}
+        enableTilt={true}
+        enableMagnetism={true}
+        clickEffect={true}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+      >
         
-        {/* Left Column (2 Cols): Assigned Schedule */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/70 shadow-sm space-y-5">
+        {/* Left Column (2 Cols): Assigned Schedule Card */}
+        <ParticleCard glowColor="19, 64, 116" className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs flex flex-col justify-start space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-extrabold text-[#0A2540]">Today's Assigned Schedule</h3>
-              <p className="text-xs text-slate-400 font-medium">Click any job to view details and update workflow checklist</p>
+              <h3 className="text-lg font-bold text-[#0B2545]">Today's Schedule</h3>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">Select a job to view details and update workflow status</p>
             </div>
             <button 
               onClick={onViewAllJobs}
-              className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-[#134074] hover:text-[#13315C] hover:underline flex items-center gap-1 transition-colors z-10"
             >
               <span>View All ({jobs.length})</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -169,10 +198,10 @@ export default function TechDashboard({
           </div>
 
           {/* Jobs List */}
-          <div className="space-y-3">
+          <div className="space-y-3 flex flex-col justify-start">
             {displayScheduleJobs.length === 0 ? (
-              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs font-bold text-slate-400">
-                🎉 No pending jobs assigned for today!
+              <div className="text-center py-12 bg-[#EEF4ED]/40 rounded-2xl border border-dashed border-slate-200/80 text-xs font-medium text-slate-500">
+                No jobs scheduled for today
               </div>
             ) : (
               displayScheduleJobs.map((job) => {
@@ -190,52 +219,42 @@ export default function TechDashboard({
                     onClick={() => onSelectJob(job)}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                       isCancelled 
-                        ? 'border-rose-200 bg-rose-50/40 hover:bg-rose-50' 
+                        ? 'border-rose-200 bg-rose-50/40 hover:bg-rose-50/60' 
                         : isEmergency
-                          ? 'border-2 border-rose-500 bg-rose-50/30 hover:bg-rose-50 hover:shadow-lg'
-                          : 'border-slate-200/80 hover:border-blue-400 hover:shadow-md bg-slate-50/50 hover:bg-white'
+                          ? 'border border-rose-300 bg-rose-50/20 hover:bg-rose-50/50 hover:shadow-sm'
+                          : 'border-slate-200/70 hover:border-[#8DA9C4] hover:shadow-sm bg-white hover:bg-[#EEF4ED]/30'
                     }`}
                   >
                     <div className="flex items-start gap-3.5">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0 ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                         isCancelled 
                           ? 'bg-rose-100 text-rose-700' 
                           : isEmergency 
-                            ? 'bg-rose-600 text-white animate-pulse' 
-                            : 'bg-blue-100 text-blue-700'
+                            ? 'bg-rose-600 text-white' 
+                            : 'bg-[#EEF4ED] text-[#134074]'
                       }`}>
-                        {isCancelled ? '🚫' : isEmergency ? '⚡' : '🔧'}
+                        {isCancelled ? <ShieldAlert className="w-5 h-5" /> : isEmergency ? <ShieldAlert className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
                       </div>
 
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className={`text-sm font-extrabold ${isCancelled ? 'text-slate-500 line-through' : 'text-[#0A2540]'}`}>
+                          <h4 className={`text-sm font-bold ${isCancelled ? 'text-slate-500 line-through' : 'text-[#0B2545]'}`}>
                             {job.title}
                           </h4>
 
                           {isEmergency && !isCancelled && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white uppercase tracking-wider animate-pulse">
-                              ⚡ EMERGENCY
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-600 text-white uppercase tracking-wider">
+                              EMERGENCY
                             </span>
                           )}
-
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                            isCancelled 
-                              ? 'bg-rose-100 text-rose-700' 
-                              : isEmergency 
-                                ? 'bg-rose-100 text-rose-700' 
-                                : 'bg-blue-100 text-blue-700'
-                          }`}>
-                            #{job.id}
-                          </span>
                         </div>
 
-                        <p className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-1">
+                        <p className="text-xs text-slate-500 font-normal mt-1 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="truncate max-w-xs">{job.location}</span>
                         </p>
 
-                        <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-400 mt-2">
+                        <div className="flex items-center gap-3 text-[11px] font-medium text-slate-400 mt-2">
                           <span className="flex items-center gap-1 text-slate-600">
                             <User className="w-3 h-3 text-slate-400" /> {job.customerName}
                           </span>
@@ -248,17 +267,17 @@ export default function TechDashboard({
                     </div>
 
                     <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
-                      <span className="text-sm font-black text-[#0A2540]">
+                      <span className="text-sm font-bold text-[#0B2545]">
                         ₹{(job.price + (job.extraCharges || 0)).toFixed(2)}
                       </span>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold ${
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${
                         isCancelled
                           ? 'bg-rose-100 text-rose-700 border border-rose-200'
                           : job.status === 'Completed' 
                             ? 'bg-emerald-100 text-emerald-700' 
                             : job.status === 'Service Started' || job.status === 'On The Way'
                               ? 'bg-amber-100 text-amber-700' 
-                              : 'bg-blue-100 text-blue-700'
+                              : 'bg-[#EEF4ED] text-[#134074]'
                       }`}>
                         {isCancelled ? 'Cancelled' : job.status}
                       </span>
@@ -268,51 +287,51 @@ export default function TechDashboard({
               })
             )}
           </div>
-        </div>
+        </ParticleCard>
 
         {/* Right Column (1 Col): Live Emergency & Action Box */}
-        <div className="space-y-5">
+        <div className="space-y-5 flex flex-col justify-start">
           
           {/* Emergency Card Box */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-rose-500 bg-rose-50/20 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-rose-200">
-              <h3 className="text-base font-extrabold text-rose-600 flex items-center gap-2">
-                <Flame className="w-4 h-4 animate-bounce" /> Emergency Broadcast
+          <ParticleCard glowColor="225, 29, 72" className="bg-white rounded-2xl p-6 border border-rose-200 bg-rose-50/20 shadow-xs flex flex-col justify-start space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-rose-200/60">
+              <h3 className="text-base font-bold text-rose-700 flex items-center gap-2">
+                Emergency Calls
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white animate-pulse">
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-600 text-white">
                 LIVE
               </span>
             </div>
 
-            <p className="text-xs font-semibold text-slate-600 leading-relaxed">
-              Available emergency dispatch calls in your service zone are broadcasted live. First technician to accept locks the job!
+            <p className="text-xs font-normal text-slate-600 leading-relaxed">
+              Emergency requests in your service area are shown here. First technician to accept gets assigned.
             </p>
 
             <button
               onClick={onTriggerEmergency}
-              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 z-10"
             >
-              <span>View Emergency Broadcast</span>
+              <span>View Emergency Calls</span>
               <ChevronRight className="w-4 h-4" />
             </button>
-          </div>
+          </ParticleCard>
 
           {/* Quick Dynamic Performance Summary Card */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-sm space-y-4">
-            <h3 className="text-base font-extrabold text-[#0A2540]">Duty Performance Summary</h3>
+          <ParticleCard glowColor="19, 64, 116" className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-xs flex flex-col justify-start space-y-4">
+            <h3 className="text-base font-bold text-[#0B2545]">Performance Summary</h3>
             
-            <div className="space-y-3 text-xs font-semibold text-slate-600">
+            <div className="space-y-3 text-xs font-medium text-slate-600">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                 <span>Jobs Completed Today</span>
-                <span className="font-extrabold text-emerald-600">{completedTodayCount} Jobs</span>
+                <span className="font-bold text-emerald-600">{completedTodayCount} Jobs</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                 <span>Total Jobs Handled</span>
-                <span className="font-extrabold text-[#0A2540]">{jobs.length} Jobs</span>
+                <span className="font-bold text-[#0B2545]">{jobs.length} Jobs</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                 <span>Emergency Jobs Accepted</span>
-                <span className="font-extrabold text-rose-600">
+                <span className="font-bold text-rose-600">
                   {jobs.filter(j => (j.isEmergency || j.tag === 'EMERGENCY') && !isJobCancelled(j)).length} Jobs
                 </span>
               </div>
@@ -322,18 +341,18 @@ export default function TechDashboard({
                   const cancelled = jobs.filter(isJobCancelled).length;
                   const rate = jobs.length > 0 ? ((cancelled / jobs.length) * 100).toFixed(1) + '%' : '0.0%';
                   return (
-                    <span className={`font-extrabold ${cancelled > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                    <span className={`font-bold ${cancelled > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
                       {rate}
                     </span>
                   );
                 })()}
               </div>
             </div>
-          </div>
+          </ParticleCard>
 
         </div>
 
-      </div>
+      </MagicBento>
 
     </div>
   );

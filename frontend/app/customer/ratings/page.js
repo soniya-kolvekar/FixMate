@@ -106,7 +106,7 @@ export default function RatingPage() {
   }
 
   return (
-    <>
+<>
     <div className="min-h-screen bg-slate-50">
     {/* Navbar */}
     <nav className="bg-white shadow-sm border-b sticky top-0 z-10">
@@ -120,7 +120,6 @@ export default function RatingPage() {
         </button>
       </div>
     </nav>
-    </div>
     <div className="max-w-2xl mx-auto py-10 px-6">
       <div className="bg-white rounded-2xl shadow-lg p-8">
 
@@ -185,6 +184,7 @@ export default function RatingPage() {
 
       </div>
     </div>
-    </>
+    </div>
+</>
   );
 }

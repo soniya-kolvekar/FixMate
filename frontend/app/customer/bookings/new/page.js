@@ -23,7 +23,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { notifyBookingCreated } from "../../../../lib/firebase/notifications";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc,orderBy } from "firebase/firestore";
 
 
 export default function BookingPage() {
@@ -54,6 +54,7 @@ useEffect(() => {
 
   const [loading, setLoading] = useState(false);
   const [hasPreviousTechnician, setHasPreviousTechnician] = useState(false);
+  const [previousTechnician, setPreviousTechnician] = useState(null);
 
  useEffect(() => {
   const checkPreviousTechnician = async () => {
@@ -63,16 +64,35 @@ useEffect(() => {
 
     try {
       const q = query(
-        collection(db, "bookings"),
-        where("customerId", "==", user.uid),
-        where("category", "==", category),
-        where("status", "==", "Completed"),
-        limit(1)
-      );
+  collection(db, "bookings"),
+  where("customerId", "==", user.uid),
+  where("status", "==", "Completed"),
+  orderBy("createdAt", "desc"),
+  limit(5)
+);
+const snapshot = await getDocs(q);
 
-      const snapshot = await getDocs(q);
+console.log("Completed bookings:", snapshot.size);
 
-      setHasPreviousTechnician(!snapshot.empty);
+snapshot.forEach(doc => {
+  console.log(doc.data().service);
+});
+
+      if (!snapshot.empty) {
+  const data = snapshot.docs[0].data();
+
+  setHasPreviousTechnician(true);
+
+  setPreviousTechnician({
+    id: data.technicianId,
+    name: data.technicianName,
+    phone: data.technicianPhone,
+    rating: data.technicianRating,
+  });
+} else {
+  setHasPreviousTechnician(false);
+  setPreviousTechnician(null);
+}
 
     } catch (error) {
       console.error(error);
@@ -80,7 +100,7 @@ useEffect(() => {
   };
 
   checkPreviousTechnician();
-}, [category]);
+}, [service]);
 
   const timeSlots = [
     '09:00 AM - 11:00 AM',
@@ -127,10 +147,9 @@ const userData = userDoc.data();
     try {
       const bookingData = {
         customerId: user.uid,
-        customerName: user.displayName || '',
+      customerName: userData.name || "",
         customerEmail: user.email,
         customerAddress: userData.address,
-
         category,
         service,
         price,
@@ -140,8 +159,20 @@ const userData = userDoc.data();
         date: formData.isEmergency ? null : formData.date,
 timeSlot: formData.isEmergency ? null : formData.timeSlot,
 
-        requestPreviousTechnician:
-          formData.requestPreviousTechnician,
+        preferredTechnicianId:
+  formData.requestPreviousTechnician
+    ? previousTechnician?.id
+    : null,
+
+preferredTechnicianName:
+  formData.requestPreviousTechnician
+    ? previousTechnician?.name
+    : null,
+
+preferredTechnicianPhone:
+  formData.requestPreviousTechnician
+    ? previousTechnician?.phone
+    : null,
 
         isEmergency: formData.isEmergency,
 
@@ -328,33 +359,62 @@ router.push("/customer/bookings");
         
                     {/* Request Previous Technician */}
 
-          {hasPreviousTechnician && (
-  <div className="border rounded-xl p-5">
+          {hasPreviousTechnician && previousTechnician && (
+  <div className="border rounded-xl p-5 bg-blue-50 border-blue-200">
 
-    <div className="flex items-start gap-3">
+    <h3 className="font-bold text-lg text-[#0A2540] mb-4">
+      Previous Technician
+    </h3>
 
-      <input
-        type="checkbox"
-        name="requestPreviousTechnician"
-        checked={formData.requestPreviousTechnician}
-        onChange={handleChange}
-        className="mt-1 w-5 h-5 accent-[#0A2540]"
-      />
+    <div className="space-y-2 mb-5">
 
-      <div>
+      <p>
+        <span className="font-semibold">Name:</span>{" "}
+        {previousTechnician.name}
+      </p>
 
-        <label className="font-semibold text-[#0A2540]">
-          Request Previous Technician
-        </label>
-
-        <p className="text-sm text-gray-500 mt-1">
-          We'll try to assign the technician who previously worked on your
-          {` ${category}`} service.
+      {previousTechnician.phone && (
+        <p>
+          <span className="font-semibold">Phone:</span>{" "}
+          {previousTechnician.phone}
         </p>
+      )}
 
-      </div>
+      {previousTechnician.rating && (
+        <p>
+          <span className="font-semibold">Rating:</span>{" "}
+          ⭐ {previousTechnician.rating}/5
+        </p>
+      )}
 
     </div>
+
+    <label className="flex items-start gap-3 cursor-pointer">
+
+      <input
+  type="checkbox"
+  name="requestPreviousTechnician"
+  checked={formData.requestPreviousTechnician}
+  onChange={handleChange}
+  disabled={formData.isEmergency}
+  className="mt-1 w-5 h-5 accent-[#0A2540]
+             disabled:cursor-not-allowed
+             disabled:opacity-50"
+/>
+
+      <div>
+        <p className="font-semibold">
+          Request this technician
+        </p>
+
+       <p className="text-sm text-gray-600">
+  {formData.isEmergency
+    ? "Previous technician requests are unavailable for emergency bookings."
+    : "If available, we'll try to assign your previous technician."}
+</p>
+      </div>
+
+    </label>
 
   </div>
 )}
