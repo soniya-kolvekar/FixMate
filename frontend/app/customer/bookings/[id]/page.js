@@ -6,7 +6,7 @@ import { db } from "../../../../lib/firebase/firebase";
 
 import {
   doc,
-  getDoc,
+  onSnapshot,
 } from "firebase/firestore";
 
 import {
@@ -34,42 +34,33 @@ export default function BookingDetailsPage() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useEffect(() =>  {
+  if (!id) return;
 
-    const loadBooking = async () => {
+  const docRef = doc(db, collectionName, id);
 
-      try {
-
-        const docRef = doc(db, collectionName, id);
-
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-
-          setBooking({
-            id: docSnap.id,
-            ...docSnap.data(),
-          });
-
-        }
-
-      } catch (error) {
-
-        console.error(error);
-
-      } finally {
-
-        setLoading(false);
-
+  const unsubscribe = onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        setBooking({
+          id: docSnap.id,
+          ...docSnap.data(),
+        });
+      } else {
+        setBooking(null);
       }
 
-    };
-
-    if (id) {
-      loadBooking();
+      setLoading(false);
+    },
+    (error) => {
+      console.error("Realtime Booking Error:", error);
+      setLoading(false);
     }
+  );
 
-  }, [id, collectionName]);
+  return () => unsubscribe();
+}, [id, collectionName]);
 
   if (loading) {
 
