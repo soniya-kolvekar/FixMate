@@ -11,6 +11,8 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 import {
@@ -27,31 +29,144 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = auth.currentUser;
+  const user = auth.currentUser;
 
-    if (!user) {
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+
+  // Existing notifications listener
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("userId", "==", user.uid),
+    orderBy("createdAt", "desc")
+  );
+
+  const unsubscribeNotifications = onSnapshot(
+    notificationsQuery,
+    (snapshot) => {
+      setNotifications(
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+      );
       setLoading(false);
-      return;
     }
+  );
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
+  const statusMessages = {
+    Pending: {
+      type: "booking_created",
+      title: "Booking Created",
+      message: "Your booking has been received.",
+    },
+
+    "Emergency Pending": {
+      type: "booking_created",
+      title: "Emergency Booking Created",
+      message: "Your emergency request has been received.",
+    },
+
+    Assigned: {
+      type: "technician_assigned",
+      title: "Technician Assigned",
+      message: "A technician has been assigned to your booking.",
+    },
+
+    Accepted: {
+      type: "technician_assigned",
+      title: "Booking Accepted",
+      message: "Your emergency booking has been accepted.",
+    },
+
+    "On The Way": {
+      type: "technician_on_the_way",
+      title: "Technician On The Way",
+      message: "The technician is on the way.",
+    },
+
+    "Reached Location": {
+      type: "technician_arrived",
+      title: "Technician Arrived",
+      message: "The technician has reached your location.",
+    },
+
+    "Service Started": {
+      type: "service_started",
+      title: "Service Started",
+      message: "The technician has started working.",
+    },
+
+    Completed: {
+      type: "service_completed",
+      title: "Service Completed",
+      message: "Your service is complete. Please rate your technician.",
+    },
+
+    Cancelled: {
+      type: "booking_cancelled",
+      title: "Booking Cancelled",
+      message: "Your booking has been cancelled.",
+    },
+  };
+
+  const watchCollection = (collectionName) => {
+    return onSnapshot(
+      query(
+        collection(db, collectionName),
+        where("customerId", "==", user.uid)
+      ),
+      async (snapshot) => {
+        for (const change of snapshot.docChanges()) {
+          if (
+            change.type !== "modified" &&
+            change.type !== "added"
+          )
+            continue;
+
+          const booking = change.doc.data();
+
+          if (
+            booking.status === booking.lastNotifiedStatus
+          )
+            continue;
+
+          const info = statusMessages[booking.status];
+
+          if (!info) continue;
+
+          await addDoc(collection(db, "notifications"), {
+            userId: user.uid,
+            bookingId: change.doc.id,
+            bookingCollection: collectionName,
+            type: info.type,
+            title: info.title,
+            message: info.message,
+            createdAt: serverTimestamp(),
+            isRead: false,
+          });
+
+          await updateDoc(change.doc.ref, {
+            lastNotifiedStatus: booking.status,
+          });
+        }
+      }
     );
+  };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+  const unsubscribeBookings = watchCollection("bookings");
+  const unsubscribeEmergency = watchCollection(
+    "emergencyBookings"
+  );
 
-      setNotifications(list);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  return () => {
+    unsubscribeNotifications();
+    unsubscribeBookings();
+    unsubscribeEmergency();
+  };
+}, []);
 
   const markAsRead = async (id) => {
     try {
@@ -79,6 +194,11 @@ export default function NotificationsPage() {
 
       case "service_completed":
         return <CheckCircle className="text-green-700" size={24} />;
+      case "technician_arrived":
+  return <AlertTriangle className="text-blue-600" size={24} />;
+
+case "booking_cancelled":
+  return <AlertTriangle className="text-red-600" size={24} />;
 
       default:
         return <Bell size={24} />;
