@@ -47,7 +47,6 @@ export default function LiveMapTab({
 
         {/* Interactive Overlay Layer */}
         <div className="absolute inset-0 z-20 pointer-events-none">
-          {/* Unassigned Incident Checkpoints (Fixed stable coordinates using ID hash to prevent shaking/jumping) */}
           {dispatches.map((disp) => {
             const hashStr = (str) => {
               let hash = 0;
@@ -67,21 +66,17 @@ export default function LiveMapTab({
                 className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer pointer-events-auto group z-20"
                 onClick={(e) => { e.stopPropagation(); handleOpenAssign(disp); }}
               >
-                {/* Stable Outer Pulsing Glow */}
                 <div className="absolute inset-0 w-12 h-12 -m-2 rounded-full border-2 border-red-500 animate-pulse opacity-70"></div>
-                {/* Inner Circle */}
-                <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white shadow-lg flex items-center justify-center text-sm transition-transform group-hover:scale-110">
-                  🚨
+                <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white shadow-lg flex items-center justify-center text-xs font-black text-white transition-transform group-hover:scale-110">
+                  !
                 </div>
               </div>
             );
           })}
 
-          {/* Technician Markers */}
           {liveTechnicians.map((tech) => {
             const isOnSite = ['Reached Location', 'Service Started', 'Service Completed'].includes(tech.status);
             const fillColor = isOnSite ? '#10B981' : '#3B82F6';
-            const icon = isOnSite ? '🏠' : '🚗';
             return (
               <div 
                 key={tech.id}
@@ -91,9 +86,9 @@ export default function LiveMapTab({
               >
                 <div 
                   style={{ backgroundColor: fillColor }}
-                  className="w-9 h-9 rounded-full border-2 border-white shadow-md flex items-center justify-center text-sm transition-transform group-hover:scale-110"
+                  className="w-9 h-9 rounded-full border-2 border-white shadow-md flex items-center justify-center text-xs font-bold text-white transition-transform group-hover:scale-110"
                 >
-                  {icon}
+                  {tech.initials}
                 </div>
               </div>
             );
@@ -368,13 +363,11 @@ export default function LiveMapTab({
           
           {liveTechnicians.length === 0 ? (
             <div className="p-6 text-center text-slate-400 font-semibold text-xs bg-white rounded-xl border border-slate-200/70 shadow-xs">
-              <p className="text-2xl mb-1">📡</p>
               <p className="font-bold text-slate-700">No Active Assigned Jobs</p>
               <p className="mt-1 text-[11px]">Jobs will appear here once assigned to a technician.</p>
             </div>
           ) : (
             <>
-              {/* IN-TRANSIT */}
               {liveTechnicians.filter(t => ['Assigned', 'Accepted', 'On the Way', 'Enroute', 'In Transit'].some(s => (t.status || '').toLowerCase().includes(s.toLowerCase()))).length > 0 && (
                 <div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 ml-2">In-Transit</h4>
@@ -387,9 +380,7 @@ export default function LiveMapTab({
                               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-sm text-[#0A2540]">
                                 {tech.initials}
                               </div>
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                                <span className="text-[8px]">🚗</span>
-                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div>
                               <h5 className="font-bold text-sm text-slate-800 leading-tight">{tech.name}</h5>
@@ -403,7 +394,6 @@ export default function LiveMapTab({
                           )}
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
-                          <span className="text-slate-400">📍</span>
                           <span>Enroute to {tech.destination}</span>
                         </div>
                       </div>
@@ -412,7 +402,6 @@ export default function LiveMapTab({
                 </div>
               )}
 
-              {/* ON-SITE & IN-PROGRESS */}
               {liveTechnicians.filter(t => !['Assigned', 'Accepted', 'On the Way', 'Enroute', 'In Transit'].some(s => (t.status || '').toLowerCase().includes(s.toLowerCase()))).length > 0 && (
                 <div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 ml-2">On-Site & In Progress</h4>
@@ -425,9 +414,7 @@ export default function LiveMapTab({
                               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-sm text-[#0A2540]">
                                 {tech.initials}
                               </div>
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                                <span className="text-[8px]">🏠</span>
-                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div>
                               <h5 className="font-bold text-sm text-slate-800 leading-tight">{tech.name}</h5>

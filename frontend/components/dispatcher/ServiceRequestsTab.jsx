@@ -73,7 +73,7 @@ export default function ServiceRequestsTab({
               <option value="Plumbing">Plumbing</option>
               <option value="AC Maintenance">AC Maintenance</option>
               <option value="Electrical">Electrical</option>
-              <option value="Appliance">Appliance</option>
+              <option value="Painting">Painting</option>
               <option value="Cleaning">Cleaning</option>
             </select>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '../../lib/firebase/firebase';
-import { collection, onSnapshot, doc, updateDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function useDispatcherState() {
   const router = useRouter();
@@ -135,16 +135,7 @@ export default function useDispatcherState() {
     };
 
     const getServiceIcon = (serviceType) => {
-      const s = serviceType.toLowerCase();
-      if (s.includes('plumb')) return '💧';
-      if (s.includes('elect')) return '⚡';
-      if (s.includes('ac ') || s.includes('ac_') || s.includes('hvac') || s.includes('air conditioning') || s.includes('maintenance')) return '❄️';
-      if (s.includes('appliance')) return '🧺';
-      if (s.includes('clean')) return '🧹';
-      if (s.includes('carpen')) return '🔨';
-      if (s.includes('paint')) return '🎨';
-      if (s.includes('pest')) return '🐜';
-      return '🛠️';
+      return '';
     };
 
     const getServiceColor = (serviceType) => {
@@ -167,11 +158,15 @@ export default function useDispatcherState() {
         
         let status = 'UNASSIGNED';
         const s = rawStatus.toUpperCase();
+        const cancelledByWho = data.cancelledBy || data.cancelledTechName;
+        const currentAssigned = data.assignedTech || data.technicianName || data.assignedTechName || data.assignedTo;
+        const isCancelledWithoutNewTech = cancelledByWho && (!currentAssigned || currentAssigned === cancelledByWho);
+
         if (s.includes('PENDING') || s === 'UNASSIGNED') {
           status = 'UNASSIGNED';
         } else if (s.includes('COMPLETED') || s.includes('FINISHED') || s.includes('DONE')) {
           status = 'COMPLETED';
-        } else if (s.includes('CANCEL')) {
+        } else if (s.includes('CANCEL') || isCancelledWithoutNewTech) {
           status = 'CANCELLED';
         } else if (s.includes('WAY') || s.includes('REACHED') || s.includes('START') || s.includes('PROGRESS') || s.includes('ACTIVE') || s.includes('TRANSIT')) {
           status = 'IN-PROGRESS';
@@ -180,7 +175,17 @@ export default function useDispatcherState() {
         }
         
         const serviceType = getServiceType(data.category, data.service);
-        const customer = data.customerName || data.customerEmail || 'Customer';
+        const rawTech = data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || '';
+        let customer = data.customerName || data.customer || '';
+
+        // Prevent showing technician's name as customer if database customerName was accidentally overwritten
+        if (customer && rawTech && customer.trim().toLowerCase() === rawTech.trim().toLowerCase()) {
+          customer = data.customerEmail || data.customerPhone || data.phone || 'Customer';
+        }
+        if (!customer) {
+          customer = data.customerEmail || 'Customer';
+        }
+
         const initials = customer.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'CU';
         
         return {
@@ -190,10 +195,24 @@ export default function useDispatcherState() {
           service: serviceType,
           status,
           rawStatus,
-          location: data.address || data.location || 'Mangaluru',
+          location: data.customerAddress || data.address || data.location || data.siteAddress || 'Mangaluru',
+          address: data.customerAddress || data.address || data.location || data.siteAddress || 'Mangaluru',
+          customerAddress: data.customerAddress || data.address || data.location || data.siteAddress || 'Mangaluru',
           color: getServiceColor(serviceType),
           icon: getServiceIcon(serviceType),
-          assignedTech: (data.status && data.status.toUpperCase() !== 'UNASSIGNED' && !data.status.toUpperCase().includes('PENDING')) ? (data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || null) : (data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || null),
+          assignedTech: (data.status && (data.status.toUpperCase() === 'UNASSIGNED' || data.status.toUpperCase().includes('PENDING'))) ? null : (data.technicianName || data.assignedTechName || data.assignedTech || data.assignedTo || null),
+          cancelledBy: data.cancelledBy || data.cancelledTechName || null,
+          cancelledTechName: data.cancelledTechName || data.cancelledBy || null,
+          cancelledTechs: Array.isArray(data.cancelledTechs) ? data.cancelledTechs : (data.cancelledBy || data.cancelledTechName ? [data.cancelledBy || data.cancelledTechName] : []),
+          description: data.description || data.notes || '',
+          notes: data.notes || '',
+          customerId: data.customerId || '',
+          customerEmail: data.customerEmail || '',
+          customerPhone: data.customerPhone || data.phone || '',
+          requestPreviousTechnician: Boolean(data.requestPreviousTechnician || data.requestPreviousTech),
+          requestPreviousTech: Boolean(data.requestPreviousTechnician || data.requestPreviousTech),
+          requestedTechName: data.requestedTechName || data.requestedTech || data.requestedTechnician || data.requestedTechnicianName || data.previousTechnicianName || data.previousTechnician || data.previousTechName || data.previousTech || data.preferredTechnician || data.preferredTech || '',
+          previousTechnicianName: data.previousTechnicianName || data.previousTechnician || data.previousTechName || data.previousTech || '',
           isEmergency,
           collectionName: isEmergency ? 'emergencyBookings' : 'bookings',
           createdAt: data.createdAt
@@ -202,25 +221,44 @@ export default function useDispatcherState() {
       
       const itemMap = new Map();
 
-      const processDoc = (d, isEmergency) => {
+      const processDoc = (d, isEmergency, isFromCustomerCollection = false) => {
         const item = mapItem(d, isEmergency);
         if (!itemMap.has(item.id)) {
-          itemMap.set(item.id, item);
+          itemMap.set(item.id, { ...item, isCustomerDoc: isFromCustomerCollection });
         } else {
           const existing = itemMap.get(item.id);
-          const eRaw = (existing.rawStatus || '').toLowerCase();
-          const nRaw = (item.rawStatus || '').toLowerCase();
+          
+          // Customer identity must strictly come from customer bookings in database
+          const preserveCustomer = (existing.isCustomerDoc && existing.customer && existing.customer !== 'Customer') 
+            ? existing.customer 
+            : (isFromCustomerCollection && item.customer && item.customer !== 'Customer') 
+              ? item.customer 
+              : (existing.customer && existing.customer !== 'Customer' ? existing.customer : item.customer);
 
-          // Prefer newer/more specific stage progression status
-          if (nRaw !== eRaw && (nRaw.includes('way') || nRaw.includes('reached') || nRaw.includes('start') || nRaw.includes('accept') || nRaw.includes('complete') || nRaw.includes('cancel'))) {
-            itemMap.set(item.id, { ...existing, ...item, rawStatus: item.rawStatus, status: item.status });
-          }
+          const preserveEmail = existing.isCustomerDoc ? (existing.customerEmail || item.customerEmail) : (item.customerEmail || existing.customerEmail);
+          const preservePhone = existing.isCustomerDoc ? (existing.customerPhone || item.customerPhone) : (item.customerPhone || existing.customerPhone);
+          const preserveInitials = preserveCustomer.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'CU';
+
+          itemMap.set(item.id, {
+            ...existing,
+            ...item,
+            customer: preserveCustomer,
+            customerName: preserveCustomer,
+            customerEmail: preserveEmail,
+            customerPhone: preservePhone,
+            initials: preserveInitials,
+            assignedTech: item.assignedTech || existing.assignedTech || null,
+            status: item.status || existing.status || 'UNASSIGNED',
+            rawStatus: item.rawStatus || existing.rawStatus,
+            isCustomerDoc: existing.isCustomerDoc || isFromCustomerCollection
+          });
         }
       };
 
-      jobsList.forEach(item => processDoc(item, false));
-      emergencyList.forEach(item => processDoc(item, true));
-      bookingsList.forEach(item => processDoc(item, false));
+      // Process customer bookings first so customer identity is derived directly from customer database
+      bookingsList.forEach(item => processDoc(item, false, true));
+      emergencyList.forEach(item => processDoc(item, true, true));
+      jobsList.forEach(item => processDoc(item, false, false));
 
       const combined = Array.from(itemMap.values());
       
@@ -430,17 +468,35 @@ export default function useDispatcherState() {
     let firestoreEmergencyBookings = [];
 
     const syncDispatchesFeed = () => {
+      const activeFirestoreDispatches = firestoreDispatches.filter(d => {
+        const s = (d.status || '').toUpperCase();
+        return s !== 'ASSIGNED' && !s.includes('ASSIGN') && !s.includes('COMPLET');
+      });
+
       const emgItems = firestoreEmergencyBookings.map(d => {
         const data = d.data();
         const isUnassigned = !data.status || data.status.toUpperCase().includes('PENDING') || data.status === 'UNASSIGNED';
         if (!isUnassigned) return null;
+
+        const combinedText = `${data.title || ''} ${data.serviceName || ''} ${data.service || ''} ${data.category || ''}`.toLowerCase();
+        let determinedTrade = '';
+        if (combinedText.includes('carpen')) determinedTrade = 'Carpentry';
+        else if (combinedText.includes('plumb')) determinedTrade = 'Plumbing';
+        else if (combinedText.includes('elect')) determinedTrade = 'Electrical';
+        else if (combinedText.includes('ac ') || combinedText.includes('ac_') || combinedText.includes('hvac') || combinedText.includes('air conditioning') || combinedText.includes('maintenance')) determinedTrade = 'AC Maintenance';
+        else if (combinedText.includes('clean')) determinedTrade = 'Cleaning';
+        else if (combinedText.includes('appliance') || combinedText.includes('microwave') || combinedText.includes('fridge') || combinedText.includes('washing')) determinedTrade = 'Appliance Repair';
+        else if (combinedText.includes('paint')) determinedTrade = 'Painting';
+        else if (combinedText.includes('pest')) determinedTrade = 'Pest Control';
+        else determinedTrade = data.service || data.category || 'Emergency';
+
         return {
           id: d.id,
-          title: data.title || data.serviceName || `${data.category || 'Emergency'} Service Request`,
+          title: determinedTrade,
           time: data.time || 'Live Broadcast',
-          address: data.address || data.location || 'Mangaluru',
+          address: data.customerAddress || data.address || data.location || data.siteAddress || 'Mangaluru',
           priority: 'Priority Level 10',
-          category: (data.category || data.serviceCategory || data.service || 'EMERGENCY').toUpperCase(),
+          category: determinedTrade.toUpperCase(),
           type: 'URGENT',
           icon: '⚡',
           colorClass: 'bg-rose-50 border-rose-100 hover:border-rose-300',
@@ -456,13 +512,28 @@ export default function useDispatcherState() {
       }).filter(Boolean);
 
       const localData = (() => {
-        try { return JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]'); }
-        catch(e) { return []; }
+        try {
+          const list = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
+          return list.filter(d => {
+            const s = (d.status || '').toUpperCase();
+            return s !== 'ASSIGNED' && !s.includes('ASSIGN') && !s.includes('COMPLET');
+          });
+        } catch(e) { return []; }
       })();
 
-      const combined = [...firestoreDispatches, ...emgItems, ...localData];
-      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-      setDispatches(unique);
+      const combined = [...activeFirestoreDispatches, ...emgItems, ...localData];
+      const uniqueMap = new Map();
+      combined.forEach(item => {
+        if (!item) return;
+        const key = item.jobId || item.reqId || item.id;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+        } else {
+          const existing = uniqueMap.get(key);
+          uniqueMap.set(key, { ...existing, ...item });
+        }
+      });
+      setDispatches(Array.from(uniqueMap.values()));
     };
 
     try {
@@ -569,8 +640,16 @@ export default function useDispatcherState() {
 
     // Filter requests that are assigned or accepted and currently active
     const assignedRequests = requests.filter(r => {
-      if (!r || r.status === 'UNASSIGNED' || r.status === 'CANCELLED' || r.status === 'COMPLETED') return false;
+      if (!r) return false;
+      const statusUpper = (r.status || '').toUpperCase();
+      if (statusUpper === 'UNASSIGNED' || statusUpper === 'CANCELLED' || statusUpper === 'COMPLETED') return false;
+
+      // Strictly exclude CANCELLATION alert dispatches
+      if (r.category === 'CANCELLATION' || (typeof r.title === 'string' && r.title.toUpperCase().includes('CANCELLATION'))) return false;
+
       const raw = (r.rawStatus || r.status || '').toLowerCase();
+      if (raw.includes('cancel')) return false;
+
       const hasTech = Boolean(r.assignedTech || r.technicianName || r.assignedTechName || r.assignedTo);
       const isActiveStatus = ['assigned', 'accepted', 'on the way', 'in transit', 'enroute', 'reached location', 'reached', 'service started', 'in-progress', 'in progress', 'busy'].some(s => raw.includes(s));
       return hasTech && isActiveStatus;
@@ -585,6 +664,19 @@ export default function useDispatcherState() {
     assignedRequests.forEach(req => {
       const techName = req.assignedTech || req.technicianName || req.assignedTechName || req.assignedTo || 'Technician';
       const techKey = techName.toLowerCase().trim();
+
+      // Exclude technicians who cancelled this specific job
+      const cancelledList = [
+        req.cancelledBy,
+        req.cancelledTechName,
+        req.cancelledByTechName,
+        ...(Array.isArray(req.cancelledTechs) ? req.cancelledTechs : []),
+        ...(Array.isArray(req.cancelledByList) ? req.cancelledByList : [])
+      ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+      if (cancelledList.some(c => c === techKey || techKey.includes(c) || c.includes(techKey))) {
+        return;
+      }
       
       // Ensure each technician only appears ONCE in the active fleet list
       if (processedTechNames.has(techKey)) return;
@@ -626,8 +718,6 @@ export default function useDispatcherState() {
       if (currentStatus.toLowerCase().includes('complete') || currentStatus.toLowerCase().includes('cancel')) {
         return;
       }
-
-      // Dynamic Location from Database Request
       const dbLoc = req.location || req.address || techObj?.zone || 'Mangaluru';
 
       // Compute dynamic SVG coordinates (cx, cy) from Database Location + Request ID
@@ -772,33 +862,33 @@ export default function useDispatcherState() {
 
   const enrichedTechnicians = useMemo(() => {
     return technicians.map(tech => {
+      const techNameNorm = (tech.name || '').toLowerCase().trim();
+      const techIdNorm = (tech.id || '').toLowerCase().trim();
+
       // Find database requests assigned to this technician
-      const techRequests = requests.filter(r => 
-        r.assignedTech && r.status !== 'UNASSIGNED' && (
-          r.assignedTech.toLowerCase() === tech.name.toLowerCase() ||
-          tech.name.toLowerCase().includes(r.assignedTech.toLowerCase()) ||
-          r.assignedTech.toLowerCase().includes(tech.name.toLowerCase())
-        )
-      );
+      const techRequests = requests.filter(r => {
+        if (!r || r.status === 'UNASSIGNED' || r.status === 'CANCELLED') return false;
+        const rTech = (r.assignedTech || r.technicianName || r.assignedTechName || r.assignedTo || '').toLowerCase().trim();
+        if (!rTech) return false;
+
+        return rTech === techNameNorm || 
+               rTech === techIdNorm || 
+               (techNameNorm && (rTech.includes(techNameNorm) || techNameNorm.includes(rTech)));
+      });
 
       const activeJobsCount = techRequests.filter(r => r.status === 'ASSIGNED' || r.status === 'IN-PROGRESS').length;
       const completedFromRequests = techRequests.filter(r => r.status === 'COMPLETED').length;
 
-      // Real completed count: use completed requests if present, else fallback to base completed
-      const finalCompleted = completedFromRequests > 0 ? completedFromRequests : (tech.completed || 0);
+      // Real completed count (max 6)
+      const finalCompleted = Math.min(6, completedFromRequests > 0 ? completedFromRequests : (tech.completed || 0));
 
-      // Real active assigned count: reduce base assigned by finalCompleted, or use activeJobsCount if active requests exist
-      let finalAssigned = 0;
-      if (activeJobsCount > 0) {
-        finalAssigned = activeJobsCount;
-      } else {
-        const baseAssigned = tech.assigned !== undefined ? tech.assigned : 0;
-        finalAssigned = Math.max(0, baseAssigned - finalCompleted);
-      }
+      // Real active assigned count: capped so (finalAssigned + finalCompleted) never exceeds 6 total jobs capacity
+      const remainingCapacity = Math.max(0, 6 - finalCompleted);
+      const finalAssigned = Math.min(remainingCapacity, activeJobsCount);
 
       return {
         ...tech,
-        assigned: Math.min(6, finalAssigned),
+        assigned: finalAssigned,
         completed: finalCompleted
       };
     });
@@ -860,7 +950,7 @@ export default function useDispatcherState() {
       reqId: req.id,
       title: `${req.service} request`,
       time: 'Just now',
-      address: req.location,
+      address: req.customerAddress || req.address || req.location,
       priority: req.isEmergency ? 'Priority Level 10' : 'Priority Level 8',
       category: req.service.toUpperCase(),
       type: req.isEmergency ? 'URGENT' : 'RESIDENTIAL',
@@ -868,7 +958,20 @@ export default function useDispatcherState() {
       isEmergency: req.isEmergency,
       collectionName: req.collectionName,
       customerName: req.customer,
-      techSpecialty: req.service
+      customerId: req.customerId,
+      customerEmail: req.customerEmail,
+      customerPhone: req.customerPhone,
+      description: req.description,
+      notes: req.notes,
+      requestPreviousTechnician: Boolean(req.requestPreviousTechnician || req.requestPreviousTech),
+      requestPreviousTech: Boolean(req.requestPreviousTechnician || req.requestPreviousTech),
+      requestedTechName: req.requestedTechName || req.requestedTech || req.previousTechnicianName || req.previousTech || '',
+      previousTechnicianName: req.previousTechnicianName || req.previousTech || '',
+      techSpecialty: req.service,
+      cancelledBy: req.cancelledBy,
+      cancelledTechName: req.cancelledTechName,
+      cancelledTechs: req.cancelledTechs,
+      technicianName: req.assignedTech || req.cancelledTechName || req.cancelledBy
     });
   };
 
@@ -956,23 +1059,38 @@ export default function useDispatcherState() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('📈 Exported requests to CSV successfully!');
+    showToast('Exported requests to CSV successfully!');
   };
 
   const handleOpenAssign = (dispatch) => {
     setAssigningDispatch(dispatch);
   };
 
-  const handleConfirmAssignment = async (techName) => {
+  const handleConfirmAssignment = (techName) => {
     const targetDispatch = assigningDispatch || {};
+    if (!targetDispatch) return;
+
+    // 1. Close modal and show toast INSTANTLY (0ms latency!)
+    setAssigningDispatch(null);
+    showToast(`Successfully assigned ${techName}!`);
+
     const dispatchId = targetDispatch.id;
+    const targetJobId = targetDispatch.jobId || targetDispatch.reqId || dispatchId;
 
     if (dispatchId) {
-      setDispatches(prev => prev.filter(d => d.id !== dispatchId));
+      setDispatches(prev => prev.filter(d => d.id !== dispatchId && d.id !== targetJobId && d.jobId !== dispatchId && d.jobId !== targetJobId));
+      
+      deleteDoc(doc(db, 'dispatches', dispatchId)).catch(() => {});
+      deleteDoc(doc(db, 'dispatcher_alerts', dispatchId)).catch(() => {});
+      if (targetJobId && targetJobId !== dispatchId) {
+        deleteDoc(doc(db, 'dispatches', targetJobId)).catch(() => {});
+        deleteDoc(doc(db, 'dispatcher_alerts', targetJobId)).catch(() => {});
+      }
+
       fetch(`http://localhost:5000/api/dispatches/${dispatchId}`, { method: 'DELETE' }).catch(() => {});
       try {
         const local = JSON.parse(localStorage.getItem('fixmate_urgent_dispatches') || '[]');
-        const updated = local.filter(d => d.id !== dispatchId);
+        const updated = local.filter(d => d.id !== dispatchId && d.jobId !== dispatchId && d.id !== targetJobId && d.jobId !== targetJobId);
         localStorage.setItem('fixmate_urgent_dispatches', JSON.stringify(updated));
         window.dispatchEvent(new Event('fixmate_dispatch_updated'));
       } catch(e) {}
@@ -983,6 +1101,47 @@ export default function useDispatcherState() {
     const selectedTech = technicians.find(t => t.name === techName);
     const targetId = requestItem?.id || targetDispatch.id || `JOB-${Date.now()}`;
 
+    const existingCancelled = Array.isArray(targetDispatch.cancelledTechs) 
+      ? targetDispatch.cancelledTechs 
+      : (requestItem && Array.isArray(requestItem.cancelledTechs)) 
+        ? requestItem.cancelledTechs 
+        : [];
+    const prevCanceller = targetDispatch.cancelledBy || targetDispatch.cancelledTechName || targetDispatch.technicianName;
+    const mergedCancelledTechs = Array.from(new Set([...existingCancelled, prevCanceller].filter(Boolean)));
+
+    const descriptionToKeep = requestItem?.description || targetDispatch.description || targetDispatch.notes || requestItem?.notes || 'Customer reported issue requiring on-site technician inspection.';
+    const notesToKeep = requestItem?.notes || targetDispatch.notes || 'Assigned by Dispatcher';
+
+    // Determine specific service/category trade name
+    const combinedText = `${targetDispatch.title || ''} ${targetDispatch.category || ''} ${targetDispatch.service || ''} ${requestItem?.service || ''} ${requestItem?.category || ''}`.toLowerCase();
+    let determinedTrade = '';
+    if (combinedText.includes('carpen')) determinedTrade = 'Carpentry';
+    else if (combinedText.includes('plumb')) determinedTrade = 'Plumbing';
+    else if (combinedText.includes('elect')) determinedTrade = 'Electrical';
+    else if (combinedText.includes('ac ') || combinedText.includes('ac_') || combinedText.includes('hvac') || combinedText.includes('air conditioning') || combinedText.includes('maintenance')) determinedTrade = 'AC Maintenance';
+    else if (combinedText.includes('clean')) determinedTrade = 'Cleaning';
+    else if (combinedText.includes('appliance') || combinedText.includes('microwave') || combinedText.includes('fridge') || combinedText.includes('washing')) determinedTrade = 'Appliance Repair';
+    else if (combinedText.includes('paint')) determinedTrade = 'Painting';
+    else if (combinedText.includes('pest')) determinedTrade = 'Pest Control';
+    else {
+      determinedTrade = targetDispatch.category || requestItem?.category || targetDispatch.title || requestItem?.service || 'Plumbing';
+      // Clean up common prefixes/suffixes
+      determinedTrade = determinedTrade
+        .replace(/MID-SERVICE CANCELLATION REQUEST/gi, '')
+        .replace(/CANCELLATION REQUEST/gi, '')
+        .replace(/EMERGENCY/gi, '')
+        .replace(/URGENT/gi, '')
+        .replace(/Service Request/gi, '')
+        .replace(/-?\s*#[A-Za-z0-9]+/g, '')
+        .replace(/[-–—🚨⚡]/g, '')
+        .trim() || 'Plumbing';
+    }
+
+    let resolvedCustomerName = requestItem?.customer || targetDispatch.customerName;
+    if (!resolvedCustomerName || (techName && resolvedCustomerName.trim().toLowerCase() === techName.trim().toLowerCase())) {
+      resolvedCustomerName = requestItem?.customerEmail || targetDispatch.customerEmail || 'Customer';
+    }
+
     const jobPayload = {
       id: targetId,
       jobId: targetId,
@@ -991,69 +1150,79 @@ export default function useDispatcherState() {
       technicianName: techName,
       assignedTechName: techName,
       technicianPhone: selectedTech?.phone || '+91 98765 43210',
-      title: targetDispatch.title || requestItem?.service || requestItem?.title || 'Service Request',
-      category: targetDispatch.category || requestItem?.service || 'Plumbing',
-      location: targetDispatch.address || targetDispatch.location || requestItem?.location || 'Kodialbail & Hampankatta, Mangaluru',
-      customerName: targetDispatch.customerName || requestItem?.customer || 'Customer',
-      customerPhone: targetDispatch.customerPhone || requestItem?.phone || '+91 98123 45678',
+      cancelledTechs: mergedCancelledTechs,
+      cancelledBy: targetDispatch.cancelledBy || null,
+      cancelledTechName: targetDispatch.cancelledTechName || null,
+      
+      // Preserve exact customer identity & description from database
+      customerId: requestItem?.customerId || targetDispatch.customerId || 'walk-in-dispatcher',
+      customerName: resolvedCustomerName,
+      customerEmail: requestItem?.customerEmail || targetDispatch.customerEmail || '',
+      customerPhone: requestItem?.customerPhone || targetDispatch.customerPhone || requestItem?.phone || '+91 98123 45678',
+      description: descriptionToKeep,
+      notes: notesToKeep,
+
+      title: determinedTrade,
+      category: determinedTrade,
+      location: targetDispatch.address || targetDispatch.location || requestItem?.customerAddress || requestItem?.address || requestItem?.location || 'Mangaluru',
+      address: targetDispatch.address || targetDispatch.location || requestItem?.customerAddress || requestItem?.address || requestItem?.location || 'Mangaluru',
       price: Number(targetDispatch.price || requestItem?.price || 499),
       isEmergency: Boolean(targetDispatch.priority?.includes('10') || requestItem?.isEmergency),
-      description: targetDispatch.notes || requestItem?.notes || 'Assigned by Dispatcher',
       time: targetDispatch.time || '09:30 AM',
       assignedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       updatedAt: new Date().toISOString()
     };
 
-    try {
-      if (requestItem) {
-        const colName = requestItem.collectionName || (requestItem.isEmergency ? 'emergencyBookings' : 'bookings');
-        await setDoc(doc(db, colName, targetId), jobPayload, { merge: true });
+    // Fire-and-forget asynchronous backend & Firestore writes
+    (async () => {
+      try {
+        if (requestItem) {
+          const colName = requestItem.collectionName || (requestItem.isEmergency ? 'emergencyBookings' : 'bookings');
+          await setDoc(doc(db, colName, targetId), jobPayload, { merge: true });
+        }
+        await setDoc(doc(db, 'jobs', targetId), jobPayload, { merge: true });
+        await setDoc(doc(db, 'bookings', targetId), jobPayload, { merge: true });
+
+        // Save to localStorage fixmate_assigned_jobs for instant cross-tab sync
+        const existingLocal = JSON.parse(localStorage.getItem('fixmate_assigned_jobs') || '[]');
+        const updatedLocal = [jobPayload, ...existingLocal.filter(j => j.id !== targetId)];
+        localStorage.setItem('fixmate_assigned_jobs', JSON.stringify(updatedLocal));
+
+        // Dispatch custom events
+        window.dispatchEvent(new CustomEvent('fixmate_job_assigned', { detail: jobPayload }));
+        window.dispatchEvent(new Event('fixmate_dispatch_updated'));
+
+        // Sync with backend API
+        fetch('http://localhost:5000/api/bookings/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(jobPayload)
+        }).catch(() => {});
+
+        // Update technician's assigned jobs count in Firestore
+        if (selectedTech && selectedTech.id) {
+          const techRef = doc(db, 'technicians', selectedTech.id);
+          await setDoc(techRef, { assignedJobsCount: (selectedTech.assigned || 0) + 1 }, { merge: true });
+        }
+      } catch (err) {
+        console.error("Error setting assignment in Firestore/backend:", err);
       }
-      await setDoc(doc(db, 'jobs', targetId), jobPayload, { merge: true });
-      await setDoc(doc(db, 'bookings', targetId), jobPayload, { merge: true });
+    })();
 
-      // Save to localStorage fixmate_assigned_jobs for instant cross-tab sync
-      const existingLocal = JSON.parse(localStorage.getItem('fixmate_assigned_jobs') || '[]');
-      const updatedLocal = [jobPayload, ...existingLocal.filter(j => j.id !== targetId)];
-      localStorage.setItem('fixmate_assigned_jobs', JSON.stringify(updatedLocal));
-
-      // Dispatch custom events
-      window.dispatchEvent(new CustomEvent('fixmate_job_assigned', { detail: jobPayload }));
-      window.dispatchEvent(new Event('fixmate_dispatch_updated'));
-
-      // Sync with backend API
-      fetch('http://localhost:5000/api/bookings/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobPayload)
-      }).catch(() => {});
-
-      // Update technician's assigned jobs count in Firestore
-      if (selectedTech && selectedTech.id) {
-        const techRef = doc(db, 'technicians', selectedTech.id);
-        await setDoc(techRef, { assignedJobsCount: (selectedTech.assigned || 0) + 1 }, { merge: true });
-      }
-    } catch (err) {
-      console.error("Error setting assignment in Firestore/backend:", err);
-    }
-
-    const newActivity = {
+    setActivities(prev => [{
       id: Date.now(),
-      text: `${assigningDispatch.title} assigned to ${techName}`,
+      text: `${targetDispatch.title || determinedTrade} assigned to ${techName}`,
       time: 'Just now',
-      meta: `${assigningDispatch.category} • Assigned by Sarah Jenkins`,
+      meta: `${targetDispatch.category || determinedTrade} • Assigned by Dispatcher`,
       type: 'info',
       dotColor: 'bg-blue-600'
-    };
-    setActivities(prev => [newActivity, ...prev]);
+    }, ...prev]);
 
-    setLogs(prev => [
-      { timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), event: `${assigningDispatch.title} assigned to ${techName}`, user: 'Sarah Jenkins' },
-      ...prev
-    ]);
-
-    showToast(`✅ Successfully assigned ${techName} to ${assigningDispatch.title}!`);
-    setAssigningDispatch(null);
+    setLogs(prev => [{
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      event: `${targetDispatch.title || determinedTrade} assigned to ${techName}`,
+      user: 'Dispatcher'
+    }, ...prev]);
   };
 
   const handleCreateRequest = async (e) => {

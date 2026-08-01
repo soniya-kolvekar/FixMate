@@ -108,13 +108,13 @@ export default function NewDispatchModal({
                 onChange={(e) => setNewRequestData({ ...newRequestData, category: e.target.value })}
                 className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent cursor-pointer bg-white transition-all"
               >
-                <option value="PLUMBING">🔧 PLUMBING</option>
-                <option value="ELECTRICAL">⚡ ELECTRICAL</option>
-                <option value="AC_SERVICE">❄️ AC MAINTENANCE</option>
-                <option value="CARPENTRY">🔨 CARPENTRY</option>
-                <option value="CLEANING">🧹 CLEANING</option>
-                <option value="APPLIANCE">🧺 APPLIANCE REPAIR</option>
-                <option value="PAINTING">🎨 PAINTING</option>
+                <option value="PLUMBING">PLUMBING</option>
+                <option value="ELECTRICAL">ELECTRICAL</option>
+                <option value="AC_SERVICE">AC MAINTENANCE</option>
+                <option value="CARPENTRY">CARPENTRY</option>
+                <option value="CLEANING">CLEANING</option>
+                <option value="APPLIANCE">APPLIANCE REPAIR</option>
+                <option value="PAINTING">PAINTING</option>
               </select>
             </div>
 
@@ -167,20 +167,6 @@ export default function NewDispatchModal({
             </div>
           )}
 
-          {/* Request Previous Technician */}
-          <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <input 
-              type="checkbox"
-              id="requestPreviousTechnician"
-              checked={Boolean(newRequestData.requestPreviousTechnician)}
-              onChange={(e) => setNewRequestData({ ...newRequestData, requestPreviousTechnician: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-            />
-            <label htmlFor="requestPreviousTechnician" className="cursor-pointer select-none">
-              <span className="block text-slate-800 font-extrabold text-xs">Request Previous Technician</span>
-              <span className="block text-[10px] text-slate-400 font-medium">Attempt to match with technician who previously serviced customer</span>
-            </label>
-          </div>
 
           {/* Emergency Dispatch */}
           <div className="flex items-center gap-3.5 bg-rose-50/70 p-4 rounded-xl border border-rose-200">
